@@ -30,7 +30,7 @@
     option { color: #333; padding: 5px; }
     .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; margin-top: 10px; }
     
-    /* 结果框容器：完美跨行与绿色字体、绝对左对齐 */
+    /* 结果框容器：完美跨行与绿色字体、强制左对齐 */
     .result-box { padding: 12px; background: #f1f3f5; border-radius: 4px; min-height: 90px; font-size: 16px; color: #28a745; word-break: break-all; white-space: pre-wrap; cursor: default; position: relative; font-weight: bold; text-align: left; }
     .result-box:hover { background: #e9ecef; }
     
@@ -210,14 +210,15 @@
   </div>
 
   <script>
-    // 终极单行修复函数：强制左侧顶格，绝不产生任何空白缩进
+    // 强力对齐与符号修复函数：强制清除每一行开头的所有缩进和多余空格
     function processLine(translatedText, originalLine) {
+      // 1. 先对译文进行基础清理
       let cleaned = translatedText
         .replace(/[\p{P}\p{S}]/gu, '')
         .replace(/\s+/g, ' ')
         .trim();
 
-      // 1. 恢复时间冒号（如 18:25）
+      // 2. 恢复时间冒号（如 18:25）
       const timeMatches = originalLine.match(/\d+[:：]\d+/g);
       if (timeMatches) {
         timeMatches.forEach(timeStr => {
@@ -229,7 +230,7 @@
         });
       }
 
-      // 2. 如果原行以数字+顿号/点开头，则精准把编号拼在最前
+      // 3. 如果原行以“数字+顿号/点”开头（例如 1、 2.），则精准把编号拼在最前
       const trimmedOrig = originalLine.trim();
       const prefixMatch = trimmedOrig.match(/^(\d+)([\.,、，])/);
       if (prefixMatch) {
@@ -239,7 +240,7 @@
         cleaned = `${num}${punc} ${cleaned}`;
       }
 
-      // 核心：强制清除行首可能存在的任何空格，保证绝对顶格！
+      // 4. 【核心大招】：强制剥离整行开头可能存在的任何隐形空格或缩进，保证所有行完美绝对顶格对齐！
       return cleaned.replace(/^\s+/, '');
     }
 
