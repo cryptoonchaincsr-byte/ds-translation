@@ -30,14 +30,15 @@
     option { color: #333; padding: 5px; }
     .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; margin-top: 10px; }
     
-    /* 结果框容器：绝对左对齐，极白亮文字 + 纤细精致的红色立体描边 */
+    /* 结果框容器：清爽浅灰底，深色清晰文字 + 极淡极细的柔和红边（不刺眼、不厚重） */
     .result-box { 
       padding: 12px; 
-      background: #181a1b !important; /* 深黑灰背景，衬托极致白字 */
+      background: #f8f9fa !important; /* 清爽柔和的浅底，不伤眼 */
+      border: 1px solid #e9ecef;
       border-radius: 4px; 
       min-height: 90px; 
       font-size: 16px; 
-      color: #ffffff !important; /* 绝对纯白色文字 */
+      color: #212529 !important; /* 沉稳清晰的深色文字，长时间看眼睛不累 */
       word-break: break-all; 
       white-space: pre-wrap; 
       cursor: default; 
@@ -45,19 +46,19 @@
       font-weight: bold; 
       text-align: left !important;
       direction: ltr !important;
-      /* 细红边效果（0.8px 细腻立体阴影） */
+      /* 极淡、极细的红色微描边（透明度降低，完全不结块、不刺眼） */
       text-shadow: 
-        -0.8px -0.8px 0 #ff1744,  
-         0.8px -0.8px 0 #ff1744,  
-        -0.8px  0.8px 0 #ff1744,  
-         0.8px  0.8px 0 #ff1744 !important;
+        -0.5px -0.5px 0 rgba(255, 82, 82, 0.6),  
+         0.5px -0.5px 0 rgba(255, 82, 82, 0.6),  
+        -0.5px  0.5px 0 rgba(255, 82, 82, 0.6),  
+         0.5px  0.5px 0 rgba(255, 82, 82, 0.6) !important;
     }
-    .result-box:hover { background: #222527; }
+    .result-box:hover { background: #f1f3f5; }
     
     /* 自定义悬浮提示卡片样式 */
     .custom-tooltip {
       visibility: hidden;
-      background-color: #111;
+      background-color: #212529;
       color: #ffffff;
       text-align: left;
       border-radius: 6px;
@@ -66,7 +67,7 @@
       z-index: 10;
       bottom: 110%;
       left: 10px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
       font-size: 14px;
       line-height: 1.4;
       opacity: 0;
@@ -75,7 +76,7 @@
       pointer-events: none;
       font-weight: bold;
       white-space: pre-wrap;
-      text-shadow: none; /* 提示框内部不需要描边 */
+      text-shadow: none;
     }
     .custom-tooltip::after {
       content: "";
@@ -84,7 +85,7 @@
       left: 20px;
       border-width: 6px;
       border-style: solid;
-      border-color: #111 transparent transparent transparent;
+      border-color: #212529 transparent transparent transparent;
     }
     .result-box:hover .custom-tooltip {
       visibility: visible;
@@ -356,7 +357,7 @@
       outputDiv.appendChild(newTooltip);
     }
 
-    function clearContent(inputId, outputId, tooltipId) {
+    clearContent = function(inputId, outputId, tooltipId) {
       document.getElementById(inputId).value = "";
       const outputDiv = document.getElementById(outputId);
       outputDiv.innerHTML = '等待输入...<span id="' + tooltipId + '" class="custom-tooltip">暂无原文</span>';
