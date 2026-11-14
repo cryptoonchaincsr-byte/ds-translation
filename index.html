@@ -224,74 +224,61 @@
   </div>
 
   <script>
-    // 强力标点修复函数：完美保护时间、数字和各类顿号/点
-    function processLine(translatedText, originalLine) {
-      let cleaned = translatedText
-        .replace(/\s+/g, ' ')
-        .trim();
+    // 占位符转换：发往 Google 前把 “数字+顿号” 变成绝对安全不会被吞的标记
+    function translateText(text, sourceLang, targetLang) {
+      return (async () => {
+        const lines = text.split('\n');
+        const translatedLines = [];
 
-      // 1. 恢复时间冒号（如 18:25）
-      const timeMatches = originalLine.match(/\d+[:：]\d+/g);
-      if (timeMatches) {
-        timeMatches.forEach(timeStr => {
-          const parts = timeStr.split(/[:：]/);
-          if (parts.length === 2) {
-            const regex = new RegExp(`\\b${parts[0]}\\s*${parts[1]}\\b`, 'g');
-            cleaned = cleaned.replace(regex, `${parts[0]}:${parts[1]}`);
+        for (let line of lines) {
+          const trimmedLine = line.replace(/^[\s\u3000]+/, '').trim();
+          if (!trimmedLine) {
+            translatedLines.push(""); 
+            continue;
           }
-        });
-      }
 
-      // 2. 完美锁定原句开头的编号与标点（兼容中文顿号、英文点、缅文逗号等各种符号）
-      const trimmedOrig = originalLine.trim();
-      const prefixMatch = trimmedOrig.match(/^(\d+)([\.,、，、\u104A\u104B]?)/); 
-      if (prefixMatch && prefixMatch[2]) {
-        const num = prefixMatch[1];
-        const punc = prefixMatch[2];
-        
-        // 如果译文开头没有这个数字，或者数字和文字连在了一起，强制规范化补回 "数字+符号+空格"
-        const strictPattern = new RegExp(`^\\s*(${num})\\s*([\\.,、，\\u104A\\u104B]*)?\\s*`);
-        cleaned = cleaned.replace(strictPattern, '');
-        cleaned = `${num}${punc} ${cleaned}`;
-      }
+          let lineToSend = trimmedLine;
+          let matchedNum = null;
+          let matchedPunc = null;
 
-      // 3. 强制清除行首可能存在的任何隐形空白
-      return cleaned.replace(/^[\s\u3000]+/, '');
-    }
+          // 匹配行首的 数字 + 各种顿号/点
+          const prefixMatch = trimmedLine.match(/^(\d+)([\.,、，\u104A\u104B]?)\s*(.*)/);
+          if (prefixMatch && prefixMatch[2]) {
+            matchedNum = prefixMatch[1];
+            matchedPunc = prefixMatch[2];
+            // 用安全的占位符替换掉开头的编号，让 Google 纯净地只翻译后面的正文
+            lineToSend = `___NUM_${matchedNum}_PUNC___ ${prefixMatch[3]}`;
+          }
 
-    // 按行拆分、逐行翻译并用 \n 拼接
-    async function translateText(text, sourceLang, targetLang) {
-      const lines = text.split('\n');
-      const translatedLines = [];
+          try {
+            const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(lineToSend)}`;
+            const res = await fetch(url);
+            const data = await res.json();
+            
+            if (data && data[0]) {
+              let translated = "";
+              data[0].forEach(item => {
+                if (item[0]) translated += item[0];
+              });
 
-      for (let line of lines) {
-        const trimmedLine = line.replace(/^[\s\u3000]+/, '').trim();
-        if (!trimmedLine) {
-          translatedLines.push(""); 
-          continue;
-        }
+              // 如果之前有编号占位符，完美还原回来：“数字 + 顿号 + 空格 + 翻译正文”
+              if (matchedNum && matchedPunc) {
+                translated = translated.replace(/___NUM_\d+_PUNC___/g, `${matchedNum}${matchedPunc}`);
+              }
 
-        try {
-          const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(trimmedLine)}`;
-          const res = await fetch(url);
-          const data = await res.json();
-          
-          if (data && data[0]) {
-            let translated = "";
-            data[0].forEach(item => {
-              if (item[0]) translated += item[0];
-            });
-            const processed = processLine(translated, trimmedLine);
-            translatedLines.push(processed);
-          } else {
+              // 清理多余空格，保证左侧绝对顶格
+              let finalCleaned = translated.replace(/\s+/g, ' ').trim().replace(/^[\s\u3000]+/, '');
+              translatedLines.push(finalCleaned);
+            } else {
+              translatedLines.push(trimmedLine);
+            }
+          } catch (e) {
             translatedLines.push(trimmedLine);
           }
-        } catch (e) {
-          translatedLines.push(trimmedLine);
         }
-      }
 
-      return translatedLines.join('\n');
+        return translatedLines.join('\n');
+      })();
     }
 
     let timerLeft = null;
