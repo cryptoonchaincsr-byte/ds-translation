@@ -193,7 +193,7 @@
         <button class="clear-btn" onclick="clearContent('inputRight', 'outputRight', 'tooltipRight')">✕ 清空</button>
       </div>
       <textarea id="inputRight" placeholder="在此输入任意外文或欧洲语言..."></textarea>
-      <div class="tip">⚡ 已开启实时翻译（提示：悬停结果可看原文本）</div>
+      <div class="tip">⚡ 已开启实时翻译（提示: 悬停结果可看原文本）</div>
       
       <div style="margin-top: 10px;">
         <span class="label">源语言：</span>
@@ -232,7 +232,7 @@
   </div>
 
   <script>
-    // 终极独立分词保护清洗函数：确保数字、百分号（如 25%）与地名/词汇完美结合，绝不丢数字
+    // 宗师级防丢数字清洗函数：用不可见的HTML特殊包裹标记，绝对不让数字、百分号、斜杠被吞或错位
     function translateText(text, sourceLang, targetLang) {
       return (async () => {
         const lines = text.split('\n');
@@ -248,7 +248,7 @@
           let prefixPart = "";
           let contentToSend = trimmedLine;
 
-          // 1. 提取行首编号（如 1. 2、 3. 5、 等）
+          // 1. 提取行首编号（如 1. 2、 3. 等）
           const prefixMatch = trimmedLine.match(/^(\d+[\.,、，\/]?)\s*(.*)/);
           if (prefixMatch && prefixMatch[1]) {
             prefixPart = prefixMatch[1]; 
@@ -260,83 +260,66 @@
             continue;
           }
 
-          // 2. 检查是否为纯数字/百分号/区间行，直接安全返回
-          if (/^[\d\.\%\-\~\s\:\：\至]+$/.test(contentToSend)) {
+          // 2. 检查是否为纯数字/符号行
+          if (/^[\d\.\%\-\~\s\:\：\至\/]+$/.test(contentToSend)) {
             translatedLines.push(trimmedLine);
             continue;
           }
 
-          // 3. 核心升级：将带有数字/百分号的词块（如 "25%美国" 或 "35%中国"）拆分成独立对子，逐个安全翻译！
-          // 匹配模式：数字+百分号/小数 + 紧跟的文字（例如 "25%美国"）
-          const chunkRegex = /(\d+(?:\.\d+)?%?)([\u4e00-\u9fa5a-zA-Z]+)/g;
-          let match;
-          let hasChunk = false;
-          let tempContent = contentToSend;
-          let replacementMap = [];
+          // 3. 【核心防丢绝招】：把原文中所有“数字+百分号、小数、带斜杠数字、时间”提取出来
+          // 我们在发给谷歌翻译前，用绝对安全的占位符（如 "TOKEN_0"）替换它们，并在翻译后原封不动按顺序缝合回去！
+          const tokens = [];
+          // 匹配：时间(18:25)、百分号(25%)、带斜杠数字(45/)、小数范围(12.52%-100%)等
+          const safeQuery = contentToSend.replace(/(\d+[:：]\d+|\d+(?:\.\d+)?%|\d+\/|\d+(?:\.\d+)?%?\s*[-~至]\s*\d+(?:\.\d+)?%?|\d+(?:\.\d+)?)/g, (match) => {
+            if (!match.trim()) return match;
+            tokens.push(match);
+            return `__T${tokens.length - 1}__`;
+          });
 
-          // 为了防止谷歌翻译接口对连在一起的数字和文字乱排，我们把每个“数字+文字”拆开，单独翻译文字，再把数字精准安在翻译结果的前面！
-          let translatedParts = [];
-          
-          // 简单起见，如果包含数字+百分号+汉字组合，我们按空格或正则安全切分
-          let parts = contentToSend.split(/(\s+)/);
-          let finalLineParts = [];
+          try {
+            const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(safeQuery)}`;
+            const res = await fetch(url);
+            const data = await res.json();
+            
+            if (data && data[0]) {
+              let translated = "";
+              data[0].forEach(item => {
+                if (item[0]) translated += item[0];
+              });
 
-          for (let part of parts) {
-            let chunkMatch = part.match(/^(\d+(?:\.\d+)?%?)([\u4e00-\u9fa5a-zA-Z]+)$/);
-            if (chunkMatch) {
-              let numSymbol = chunkMatch[1]; // 如 "25%"
-              let word = chunkMatch[2];       // 如 "美国"
-              try {
-                const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(word)}`;
-                const res = await fetch(url);
-                const data = await res.json();
-                let translatedWord = word;
-                if (data && data[0]) {
-                  translatedWord = "";
-                  data[0].forEach(item => {
-                    if (item[0]) translatedWord += item[0];
-                  });
-                  translatedWord = translatedWord.replace(/[，,。．?!？！;；""''""（）()\[\]{}《》〈〉]/g, '').trim();
-                }
-                // 英文习惯通常是 "United States 25%" 或者保持原样，按用户习惯这里组装为 "25% United States" 或原样
-                finalLineParts.push(numSymbol + " " + translatedWord);
-              } catch (e) {
-                finalLineParts.push(part);
-              }
-            } else {
-              // 普通文本块正常走翻译
-              if (part.trim() && !/^[\s]+$/.test(part)) {
-                try {
-                  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(part)}`;
-                  const res = await fetch(url);
-                  const data = await res.json();
-                  let translatedPart = part;
-                  if (data && data[0]) {
-                    translatedPart = "";
-                    data[0].forEach(item => {
-                      if (item[0]) translatedPart += item[0];
-                    });
+              // 4. 将原汁原味的数字/百分号/斜杠从 tokens 里完美嵌回翻译后的文本
+              tokens.forEach((tokenVal, idx) => {
+                // 用正则全局替换对应的占位符
+                const reg = new RegExp(`__T${idx}__`, 'g');
+                translated = translated.replace(reg, tokenVal);
+              });
+
+              // 5. 清理多余标点，但放行冒号、百分号、小数点、斜杠、连字符
+              let cleanedBody = translated
+                .replace(/[，,。．?!？！;；""''""（）()\[\]{}《》〈〉]/g, ' ') 
+                .replace(/[\p{P}\p{S}]/gu, (match) => {
+                  if (match === ':' || match === '：' || match === '%' || match === '.' || match === '-' || match === '/') {
+                    return match;
                   }
-                  finalLineParts.push(translatedPart);
-                } catch (e) {
-                  finalLineParts.push(part);
-                }
-              } else {
-                finalLineParts.push(part);
+                  return '';
+                });
+
+              cleanedBody = cleanedBody.replace(/\s+/g, ' ').trim();
+
+              // 6. 组装行首编号
+              let finalLine = cleanedBody;
+              if (prefixPart) {
+                cleanedBody = cleanedBody.replace(/^\d+[\.,、，\/]?\s*/, '');
+                finalLine = prefixPart + " " + cleanedBody;
               }
+
+              translatedLines.push(finalLine);
+            } else {
+              translatedLines.push(trimmedLine);
             }
+          } catch (e) {
+            translatedLines.push(trimmedLine);
           }
-
-          let cleanedBody = finalLineParts.join('').replace(/\s+/g, ' ').trim();
-
-          // 4. 组装行首编号
-          let finalLine = cleanedBody;
-          if (prefixPart) {
-            cleanedBody = cleanedBody.replace(/^\d+[\.,、，\/]?\s*/, '');
-            finalLine = prefixPart + " " + cleanedBody;
-          }
-
-          translatedLines.push(finalLine);
         }
 
         return translatedLines.join('\n');
