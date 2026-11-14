@@ -152,7 +152,7 @@
             <option value="sk">斯洛伐克语 (Slovak)</option>
             <option value="sl">斯洛文尼亚语 (Slovenian)</option>
             <option value="et">爱沙尼亚语 (Estonian)</option>
-            <option value="lv">拉脱维亚语 (Latvian)</option>
+            <option value="lv">Latvian</option>
             <option value="lt">立陶宛语 (Lithuanian)</option>
             <option value="sr">塞尔维亚语 (Serbian)</option>
             <option value="sq">阿尔巴尼亚语 (Albanian)</option>
@@ -167,7 +167,7 @@
       </div>
 
       <div class="result-header">
-        <span class="label">欧洲语种翻译结果（无任何标点、完美对齐）：</span>
+        <span class="label">欧洲语种翻译结果（保留时间冒号与数字点、完美对齐）：</span>
         <div class="btn-group">
           <button id="copyLeftBtn" class="copy-btn" onclick="copyText('outputLeft', 'copyLeftBtn')">一键复制</button>
         </div>
@@ -211,7 +211,7 @@
       </div>
 
       <div class="result-header">
-        <span class="label">亚洲主要语言翻译结果（无任何标点、完美对齐）：</span>
+        <span class="label">亚洲主要语言翻译结果（保留时间冒号与数字点、完美对齐）：</span>
         <div class="btn-group">
           <button id="copyRightBtn" class="copy-btn" onclick="copyText('outputRight', 'copyRightBtn')">一键复制</button>
         </div>
@@ -224,52 +224,42 @@
   </div>
 
   <script>
-    // 终极无标点清洗函数：精准过滤所有标点、问号、句号、叹号，但完美保留时间里的冒号（如 18:25）
-    function processLine(translatedText, originalLine) {
-      if (!translatedText) return "";
-
-      // 1. 先把原文本中的时间冒号（如 18:25）临时保护起来
-      let timeReplaced = translatedText;
-      const timeMatches = originalLine.match(/\d+[:：]\d+/g);
-      
-      // 2. 强力清除所有标点符号（包括问号 ?、句号 .、逗号 ,、感叹号 ! 等，同时保留字母、数字、汉字、空格和时间冒号）
-      let cleaned = translatedText
-        // 将常见的标点直接替换为空格或空字符串（除了冒号）
-        .replace(/[，,。．?!？！;；:：""''""（）()\[\]{}《》〈〉、-]/g, ' ')
-        // 兜底：使用通用标点属性清除其他隐藏标点，但排除时间冒号
-        .replace(/[\p{P}\p{S}]/gu, (match) => {
-          return match === ':' || match === '：' ? match : '';
-        });
-
-      // 3. 如果原行有时间，确保时间格式稳固
-      if (timeMatches) {
-        timeMatches.forEach(timeStr => {
-          const parts = timeStr.split(/[:：]/);
-          if (parts.length === 2) {
-            const regex = new RegExp(`\\b${parts[0]}\\s*${parts[1]}\\b`, 'g');
-            cleaned = cleaned.replace(regex, `${parts[0]}:${parts[1]}`);
-          }
-        });
-      }
-
-      // 4. 压缩多余空格，并切断行首缩进
-      return cleaned.replace(/\s+/g, ' ').trim().replace(/^[\s\u3000]+/, '');
-    }
-
-    // 按行拆分、逐行翻译并用 \n 拼接
+    // 终极高保真清洗函数：保护时间冒号和行首编号点，其余所有标点统统抹除
     function translateText(text, sourceLang, targetLang) {
       return (async () => {
         const lines = text.split('\n');
         const translatedLines = [];
 
         for (let line of lines) {
-          if (!line.trim()) {
+          const trimmedLine = line.replace(/^[\s\u3000]+/, '').trim();
+          if (!trimmedLine) {
             translatedLines.push(""); 
             continue;
           }
 
+          let lineToSend = trimmedLine;
+          let prefixHolder = null;
+          let timeHolders = [];
+
+          // 1. 保护行首编号（如 1. 或 2. 或 1、）
+          const prefixMatch = trimmedLine.match(/^(\d+)([\.,、，\u104A\u104B]?)\s*(.*)/);
+          if (prefixMatch && prefixMatch[2]) {
+            prefixHolder = prefixMatch[1] + prefixMatch[2]; // 例如 "1."
+            lineToSend = `___PREFIX___ ${prefixMatch[3]}`;
+          }
+
+          // 2. 保护行内的所有时间格式（如 18:25）
+          const timeMatches = lineToSend.match(/\d+[:：]\d+/g);
+          if (timeMatches) {
+            timeMatches.forEach((tStr, idx) => {
+              const placeholder = `___TIME_${idx}___`;
+              lineToSend = lineToSend.replace(tStr, placeholder);
+              timeHolders.push({ placeholder: placeholder, original: tStr.replace('：', ':') });
+            });
+          }
+
           try {
-            const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(line)}`;
+            const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(lineToSend)}`;
             const res = await fetch(url);
             const data = await res.json();
             
@@ -278,12 +268,33 @@
               data[0].forEach(item => {
                 if (item[0]) translated += item[0];
               });
-              translatedLines.push(processLine(translated, line));
+
+              // 3. 抹除翻译结果中除保护占位符之外的所有其他标点符号（问号、句号、逗号、叹号等）
+              // 先把占位符暂时替换成不会被正则误伤的安全字符串
+              translated = translated.replace(/___PREFIX___/g, '___P_SAFE___');
+              timeHolders.forEach((th, idx) => {
+                translated = translated.replace(new RegExp(th.placeholder, 'g'), `___T_SAFE_${idx}___`);
+              });
+
+              // 清除常规标点
+              translated = translated
+                .replace(/[，,。．?!？！;；""''""（）()\[\]{}《》〈〉-]/g, ' ')
+                .replace(/[\p{P}\p{S}]/gu, '');
+
+              // 4. 精准还原保护标记
+              translated = translated.replace(/___P_SAFE___/g, prefixHolder ? prefixHolder : '');
+              timeHolders.forEach((th, idx) => {
+                translated = translated.replace(new RegExp(`___T_SAFE_${idx}___`, 'g'), th.original);
+              });
+
+              // 5. 最终清理多余空格与左侧缩进
+              let finalCleaned = translated.replace(/\s+/g, ' ').trim().replace(/^[\s\u3000]+/, '');
+              translatedLines.push(finalCleaned);
             } else {
-              translatedLines.push(processLine(line, line));
+              translatedLines.push(trimmedLine);
             }
           } catch (e) {
-            translatedLines.push(processLine(line, line));
+            translatedLines.push(trimmedLine);
           }
         }
 
