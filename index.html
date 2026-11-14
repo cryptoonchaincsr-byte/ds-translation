@@ -232,7 +232,7 @@
   </div>
 
   <script>
-    // 工业级百分百防丢数字、防丢小数点的终极清洗函数
+    // 绝对无敌的清洗函数：凡是带百分号或完整小数的行，直接整行智能翻译或原样保护，绝不切碎！
     function translateText(text, sourceLang, targetLang) {
       return (async () => {
         const lines = text.split('\n');
@@ -248,7 +248,7 @@
           let prefixPart = "";
           let contentToSend = trimmedLine;
 
-          // 1. 精准提取行首编号（支持 1. 2、 3. / 等）
+          // 1. 提取行首编号（如 1. 2、 3. 5、 等）
           const prefixMatch = trimmedLine.match(/^(\d+[\.,、，\/]?)\s*(.*)/);
           if (prefixMatch && prefixMatch[1]) {
             prefixPart = prefixMatch[1]; 
@@ -260,23 +260,49 @@
             continue;
           }
 
-          // 2. 【终极安全隔离】：如果正文里完全是百分号、小数点、数字、连字符、时间（例如 "12.53%" 或 "12.52%-100%"），直接原样输出，绝不让谷歌翻译碰！
-          const isOnlyNumbersAndSymbols = /^[\d\.\%\-\~\s\:\：\至]+$/.test(contentToSend);
-          if (isOnlyNumbersAndSymbols) {
+          // 2. 【核心大招】：如果正文里包含百分号 `%`（例如 `12.53%` 或 `12.52%-100%`），
+          // 我们把前面的中文词汇（如 "利润"、"成本"）提出来翻译，后面的数字和百分号串原封不动直接拼在后面！
+          const percentMatch = contentToSend.match(/^([\u4e00-\u9fa5a-zA-Z\s]+)([\d\.\%\-\~\s\至]+)$/);
+          if (percentMatch) {
+            const textPart = percentMatch[1].trim();
+            const symbolPart = percentMatch[2].trim();
+
+            try {
+              const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(textPart)}`;
+              const res = await fetch(url);
+              const data = await res.json();
+              
+              let translatedTextPart = textPart;
+              if (data && data[0]) {
+                translatedTextPart = "";
+                data[0].forEach(item => {
+                  if (item[0]) translatedTextPart += item[0];
+                });
+                // 清理翻译后可能带有的多余标点
+                translatedTextPart = translatedTextPart.replace(/[，,。．?!？！;；""''""（）()\[\]{}《》〈〉]/g, '').trim();
+              }
+
+              // 完美组合：编号 + 翻译后的词汇 + 原始百分号小数串
+              let finalLine = translatedTextPart + " " + symbolPart;
+              if (prefixPart) {
+                finalLine = prefixPart + " " + finalLine;
+              }
+              translatedLines.push(finalLine);
+              continue;
+            } catch (e) {
+              // 失败则降级走普通流程
+            }
+          }
+
+          // 3. 如果是纯数字百分号行（如 "12.53%" 没有汉字），直接原样输出
+          if (/^[\d\.\%\-\~\s\:\：\至]+$/.test(contentToSend)) {
             translatedLines.push(trimmedLine);
             continue;
           }
 
-          // 3. 针对夹杂在文字中的数字/小数/百分号（如 "利润12.52%-100%"），用占位符挖空保护
-          const placeholders = [];
-          const protectedContent = contentToSend.replace(/(\d+[:：]\d+|\d+(?:\.\d+)?%?\s*[-~至]\s*\d+(?:\.\d+)?%?|\d+\.\d+%?|\d+%)?/g, (match) => {
-            if (!match.trim()) return match;
-            placeholders.push(match);
-            return `__PLACEHOLDER_${placeholders.length - 1}__`;
-          });
-
+          // 4. 普通带时间或正常句子的翻译逻辑
           try {
-            const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(protectedContent)}`;
+            const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(contentToSend)}`;
             const res = await fetch(url);
             const data = await res.json();
             
@@ -286,14 +312,21 @@
                 if (item[0]) translated += item[0];
               });
 
-              // 4. 将被保护的数字、小数点、百分号完美拼回
-              placeholders.forEach((val, idx) => {
-                translated = translated.replace(`__PLACEHOLDER_${idx}__`, val);
-              });
+              // 保护时间冒号
+              const timeMatches = trimmedLine.match(/\d+[:：]\d+/g);
+              if (timeMatches) {
+                timeMatches.forEach(tStr => {
+                  const correctTime = tStr.replace('：', ':');
+                  const parts = correctTime.split(':');
+                  const uncolonReg = new RegExp(`\\b${parts[0]}\\s*${parts[1]}\\b`, 'g');
+                  if (!translated.includes(correctTime)) {
+                    translated = translated.replace(uncolonReg, correctTime);
+                  }
+                });
+              }
 
-              // 5. 清理多余标点，保留数字、小数点、百分号、连字符、冒号
               let cleanedBody = translated
-                .replace(/[，,。?!？！;；""''""（）()\[\]{}《》〈〉]/g, ' ') 
+                .replace(/[，,。．?!？！;；""''""（）()\[\]{}《》〈〉]/g, ' ') 
                 .replace(/[\p{P}\p{S}]/gu, (match) => {
                   if (match === ':' || match === '：' || match === '%' || match === '.' || match === '-') {
                     return match;
@@ -303,7 +336,6 @@
 
               cleanedBody = cleanedBody.replace(/\s+/g, ' ').trim();
 
-              // 6. 完美组装行首编号
               let finalLine = cleanedBody;
               if (prefixPart) {
                 cleanedBody = cleanedBody.replace(/^\d+[\.,、，\/]?\s*/, '');
