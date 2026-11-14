@@ -30,15 +30,15 @@
     option { color: #333; padding: 5px; }
     .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; margin-top: 10px; }
     
-    /* 结果框容器：必须设为 relative 以便精确定位浮动提示框 */
-    .result-box { padding: 12px; background: #f1f3f5; border-radius: 4px; min-height: 90px; font-size: 16px; color: #333; word-break: break-all; white-space: pre-wrap; cursor: pointer; position: relative; }
+    /* 结果框容器 */
+    .result-box { padding: 12px; background: #f1f3f5; border-radius: 4px; min-height: 90px; font-size: 16px; color: #333; word-break: break-all; white-space: pre-wrap; cursor: default; position: relative; }
     .result-box:hover { background: #e9ecef; }
     
-    /* 自定义悬浮提示卡片样式 */
+    /* 自定义绿色字体的悬浮提示卡片 */
     .custom-tooltip {
       visibility: hidden;
       background-color: #212529;
-      color: #fff;
+      color: #28a745; /* 设置字体为绿色 */
       text-align: left;
       border-radius: 6px;
       padding: 8px 12px;
@@ -53,6 +53,7 @@
       transition: opacity 0.2s ease-in-out;
       max-width: 90%;
       pointer-events: none;
+      font-weight: bold;
     }
     .custom-tooltip::after {
       content: "";
@@ -96,7 +97,7 @@
         <button class="clear-btn" onclick="clearContent('inputLeft', 'outputLeft')">✕ 清空</button>
       </div>
       <textarea id="inputLeft" placeholder="在此输入中文、缅甸语、老挝语或泰语..."></textarea>
-      <div class="tip">⚡ 已开启实时翻译（提示：悬停或点击结果可看原文本）</div>
+      <div class="tip">⚡ 已开启实时翻译（提示：鼠标悬停结果即可查看原文本）</div>
       
       <div style="margin-top: 10px;">
         <span class="label">源语言：</span>
@@ -157,8 +158,8 @@
           <button id="copyLeftBtn" class="copy-btn" onclick="copyText('outputLeft', 'copyLeftBtn')">一键复制</button>
         </div>
       </div>
-      <!-- 结果框内嵌自定义提示气泡 -->
-      <div id="outputLeft" class="result-box" onclick="showOriginal('inputLeft', 'outputLeft', '源文本')">
+      <!-- 结果框（去掉了点击事件，改为纯悬停） -->
+      <div id="outputLeft" class="result-box">
         等待输入...
         <span id="tooltipLeft" class="custom-tooltip">暂无原文</span>
       </div>
@@ -171,7 +172,7 @@
         <button class="clear-btn" onclick="clearContent('inputRight', 'outputRight')">✕ 清空</button>
       </div>
       <textarea id="inputRight" placeholder="在此输入任意外文或欧洲语言..."></textarea>
-      <div class="tip">⚡ 已开启实时翻译（提示：悬停或点击结果可看原文本）</div>
+      <div class="tip">⚡ 已开启实时翻译（提示：鼠标悬停结果即可查看原文本）</div>
       
       <div style="margin-top: 10px;">
         <span class="label">源语言：</span>
@@ -202,8 +203,8 @@
           <button id="copyRightBtn" class="copy-btn" onclick="copyText('outputRight', 'copyRightBtn')">一键复制</button>
         </div>
       </div>
-      <!-- 结果框内嵌自定义提示气泡 -->
-      <div id="outputRight" class="result-box" onclick="showOriginal('inputRight', 'outputRight', '源文本')">
+      <!-- 结果框（去掉了点击事件，改为纯悬停） -->
+      <div id="outputRight" class="result-box">
         等待输入...
         <span id="tooltipRight" class="custom-tooltip">暂无原文</span>
       </div>
@@ -247,7 +248,7 @@
           });
           const cleanResult = removePunctuation(translated);
           output.firstChild.nodeValue = cleanResult;
-          // 实时更新悬浮卡片显示的内容
+          // 悬停卡片更新为绿色字体的内容
           tooltip.innerText = "原文本：\n" + text;
         } else {
           output.firstChild.nodeValue = "翻译失败，请重试";
@@ -283,7 +284,7 @@
           });
           const cleanResult = removePunctuation(translated);
           output.firstChild.nodeValue = cleanResult;
-          // 实时更新悬浮卡片显示的内容
+          // 悬停卡片更新为绿色字体的内容
           tooltip.innerText = "原文本：\n" + text;
         } else {
           output.firstChild.nodeValue = "翻译失败，请重试";
@@ -291,17 +292,6 @@
       } catch (e) {
         output.firstChild.nodeValue = "网络连接异常，请检查网络";
       }
-    }
-
-    // 点击翻译结果时，弹窗显示原文内容
-    function showOriginal(inputId, outputId, labelName) {
-      const inputText = document.getElementById(inputId).value.trim();
-      const outputNodeText = document.getElementById(outputId).firstChild.nodeValue;
-
-      if (!inputText || outputNodeText.includes("等待输入") || outputNodeText.includes("实时翻译中")) {
-        return;
-      }
-      alert(`【${labelName}详情】\n\n${inputText}`);
     }
 
     // 一键清空输入框和结果框的内容
@@ -318,7 +308,6 @@
 
     function copyText(outputId, btnId) {
       const outputDiv = document.getElementById(outputId);
-      // 获取纯文本内容（排除内部的span提示标签）
       const outputText = outputDiv.firstChild.nodeValue ? outputDiv.firstChild.nodeValue.trim() : "";
       const copyBtn = document.getElementById(btnId);
 
