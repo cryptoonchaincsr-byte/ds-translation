@@ -232,7 +232,7 @@
   </div>
 
   <script>
-    // 终极硬核清洗函数：包含智能保底，绝不丢字、绝不丢符号
+    // 宗师级防丢字、防丢小数点、完美对齐清洗函数
     function translateText(text, sourceLang, targetLang) {
       return (async () => {
         const lines = text.split('\n');
@@ -248,14 +248,14 @@
           let prefixPart = "";
           let contentToSend = trimmedLine;
 
-          // 1. 分离编号和正文
+          // 1. 分离行首编号（如 1. 2、 3. / 等）
           const prefixMatch = trimmedLine.match(/^(\d+[\.,、，\/]?)\s*(.*)/);
           if (prefixMatch && prefixMatch[1]) {
             prefixPart = prefixMatch[1]; 
             contentToSend = prefixMatch[2] ? prefixMatch[2].trim() : ""; 
           }
 
-          // 【智能保底】如果整行只有编号（比如 "3、" 或 "4."）或者没有需要翻译的正文，直接原样保留！
+          // 如果没有正文（例如只有 "3、"），直接原样返回
           if (!contentToSend) {
             translatedLines.push(trimmedLine);
             continue;
@@ -272,7 +272,7 @@
                 if (item[0]) translated += item[0];
               });
 
-              // 2. 保护原句中的时间冒号（如 18:25）
+              // 2. 保护时间冒号（如 18:25）
               const timeMatches = trimmedLine.match(/\d+[:：]\d+/g);
               if (timeMatches) {
                 timeMatches.forEach(tStr => {
@@ -285,16 +285,20 @@
                 });
               }
 
-              // 3. 清除翻译结果中除冒号 `:` 和百分号 `%` 之外的多余标点
+              // 3. 严格清洗标点，但【严禁抹杀】小数点(.)、连接符(-)、百分号(%)、冒号(:)
               let cleanedBody = translated
-                .replace(/[，,。．?!？！;；""''""（）()\[\]{}《》〈〉-]/g, ' ')
+                .replace(/[，,。?!？！;；""''""（）()\[\]{}《》〈〉]/g, ' ') // 去掉普通标点，但保留 . 和 -
                 .replace(/[\p{P}\p{S}]/gu, (match) => {
-                  return (match === ':' || match === '：' || match === '%') ? match : '';
+                  // 允许保留的符号：冒号(:)、百分号(%)、小数点(.)、数字连字符(-)
+                  if (match === ':' || match === '：' || match === '%' || match === '.' || match === '-') {
+                    return match;
+                  }
+                  return '';
                 });
 
               cleanedBody = cleanedBody.replace(/\s+/g, ' ').trim();
 
-              // 4. 行首编号与翻译正文完美拼接
+              // 4. 将行首编号与清洗好的正文安全拼接
               let finalLine = cleanedBody;
               if (prefixPart) {
                 cleanedBody = cleanedBody.replace(/^\d+[\.,、，\/]?\s*/, '');
