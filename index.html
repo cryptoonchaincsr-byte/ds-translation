@@ -30,7 +30,7 @@
     option { color: #333; padding: 5px; }
     .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; margin-top: 10px; }
     
-    /* 结果框容器：强制绝对左对齐，彻底封死任何缩进可能 */
+    /* 结果框容器：绝对左对齐，坚决不缩进 */
     .result-box { 
       padding: 12px; 
       background: #f1f3f5; 
@@ -167,7 +167,7 @@
       </div>
 
       <div class="result-header">
-        <span class="label">欧洲语种翻译结果（绝对整齐对齐）：</span>
+        <span class="label">欧洲语种翻译结果（完美对齐）：</span>
         <div class="btn-group">
           <button id="copyLeftBtn" class="copy-btn" onclick="copyText('outputLeft', 'copyLeftBtn')">一键复制</button>
         </div>
@@ -211,7 +211,7 @@
       </div>
 
       <div class="result-header">
-        <span class="label">亚洲主要语言翻译结果（绝对整齐对齐）：</span>
+        <span class="label">亚洲主要语言翻译结果（完美对齐）：</span>
         <div class="btn-group">
           <button id="copyRightBtn" class="copy-btn" onclick="copyText('outputRight', 'copyRightBtn')">一键复制</button>
         </div>
@@ -224,10 +224,9 @@
   </div>
 
   <script>
-    // 终极清洗函数：绝对强制切断任何行首隐藏空格与缩进
+    // 强力标点修复函数：完美保护时间、数字和各类顿号/点
     function processLine(translatedText, originalLine) {
       let cleaned = translatedText
-        .replace(/[\p{P}\p{S}]/gu, '')
         .replace(/\s+/g, ' ')
         .trim();
 
@@ -243,19 +242,20 @@
         });
       }
 
-      // 2. 恢复编号顿号
+      // 2. 完美锁定原句开头的编号与标点（兼容中文顿号、英文点、缅文逗号等各种符号）
       const trimmedOrig = originalLine.trim();
-      const prefixMatch = trimmedOrig.match(/^(\d+)([\.,、，])/);
-      if (prefixMatch) {
+      const prefixMatch = trimmedOrig.match(/^(\d+)([\.,、，、\u104A\u104B]?)/); 
+      if (prefixMatch && prefixMatch[2]) {
         const num = prefixMatch[1];
         const punc = prefixMatch[2];
-        if (!cleaned.startsWith(num)) {
-          cleaned = cleaned.replace(new RegExp(`^\\s*(${num})?\\s*`, 'g'), '');
-          cleaned = `${num}${punc} ${cleaned}`;
-        }
+        
+        // 如果译文开头没有这个数字，或者数字和文字连在了一起，强制规范化补回 "数字+符号+空格"
+        const strictPattern = new RegExp(`^\\s*(${num})\\s*([\\.,、，\\u104A\\u104B]*)?\\s*`);
+        cleaned = cleaned.replace(strictPattern, '');
+        cleaned = `${num}${punc} ${cleaned}`;
       }
 
-      // 3. 核心大招：利用正则表达式直接抹杀一切行首空白字符（包括全角/半角/零宽空格）
+      // 3. 强制清除行首可能存在的任何隐形空白
       return cleaned.replace(/^[\s\u3000]+/, '');
     }
 
@@ -265,7 +265,6 @@
       const translatedLines = [];
 
       for (let line of lines) {
-        // 关键：对输入的每一行也做最彻底的 strip 净化
         const trimmedLine = line.replace(/^[\s\u3000]+/, '').trim();
         if (!trimmedLine) {
           translatedLines.push(""); 
