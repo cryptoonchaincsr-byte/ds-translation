@@ -94,7 +94,7 @@
     <div class="panel">
       <div class="input-header">
         <span class="label">🇨🇳 🇲🇲 🇱🇦 🇹🇭 输入主要语言文本：</span>
-        <button class="clear-btn" onclick="clearContent('inputLeft', 'outputLeft', 'tooltipLeft')">✕ 清空</button>
+        <button class="clear-btn" onclick="clearContent('inputLeft', 'textLeft', 'tooltipLeft')">✕ 清空</button>
       </div>
       <textarea id="inputLeft" placeholder="在此输入中文、缅甸语、老挝语或泰语..."></textarea>
       <div class="tip">⚡ 已开启实时翻译（提示：悬停结果可看原文本）</div>
@@ -158,7 +158,6 @@
           <button id="copyLeftBtn" class="copy-btn" onclick="copyText('textLeft', 'copyLeftBtn')">一键复制</button>
         </div>
       </div>
-      <!-- 用单独的 span 包裹翻译文本，防止提示框被覆盖 -->
       <div id="outputLeft" class="result-box">
         <span id="textLeft">等待输入...</span>
         <span id="tooltipLeft" class="custom-tooltip">暂无原文</span>
@@ -169,7 +168,7 @@
     <div class="panel">
       <div class="input-header">
         <span class="label">🌐 输入或粘贴外文/自动检测：</span>
-        <button class="clear-btn" onclick="clearContent('inputRight', 'outputRight', 'tooltipRight')">✕ 清空</button>
+        <button class="clear-btn" onclick="clearContent('inputRight', 'textRight', 'tooltipRight')">✕ 清空</button>
       </div>
       <textarea id="inputRight" placeholder="在此输入任意外文或欧洲语言..."></textarea>
       <div class="tip">⚡ 已开启实时翻译（提示：悬停结果可看原文本）</div>
@@ -203,7 +202,6 @@
           <button id="copyRightBtn" class="copy-btn" onclick="copyText('textRight', 'copyRightBtn')">一键复制</button>
         </div>
       </div>
-      <!-- 用单独的 span 包裹翻译文本，防止提示框被覆盖 -->
       <div id="outputRight" class="result-box">
         <span id="textRight">等待输入...</span>
         <span id="tooltipRight" class="custom-tooltip">暂无原文</span>
@@ -212,7 +210,7 @@
   </div>
 
   <script>
-    // 对单行文本进行清理与特殊符号保护
+    // 优化：对单行文本进行清理，同时全方位保护时间冒号和数字后的顿号/点
     function processLine(translatedText, originalLine) {
       let cleaned = translatedText
         .replace(/[\p{P}\p{S}]/gu, '')
@@ -231,18 +229,20 @@
         });
       }
 
-      // 2. 恢复该行中数字后的顿号或点（如 1、 2.）
+      // 2. 恢复该行中数字后的顿号或点（如 1、 2.），自动兼容英文翻译后数字与文字紧挨着的情况
       const numPuncMatches = originalLine.match(/\d+[\.,、，]/g);
       if (numPuncMatches) {
         numPuncMatches.forEach(np => {
           const num = np.match(/\d+/)[0];
           const punc = np.match(/[\.,、，]/)[0];
-          const regex = new RegExp(`\\b${num}\\s+`, 'g');
-          cleaned = cleaned.replace(regex, `${num}${punc} `);
+          // 匹配数字开头的模式，并在数字后面强行补回原有的符号和空格
+          const regex = new RegExp(`(^|\\b)${num}\\s*`, 'g');
+          cleaned = cleaned.replace(regex, `$1${num}${punc} `);
         });
       }
 
-      return cleaned;
+      // 整理多余空格
+      return cleaned.replace(/\s+/g, ' ').trim();
     }
 
     // 按行拆分、逐行翻译并用 \n 拼接
