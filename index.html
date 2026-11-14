@@ -30,14 +30,14 @@
     option { color: #333; padding: 5px; }
     .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; margin-top: 10px; }
     
-    /* 结果框容器：绝对左对齐，绿字 + 红色立体描边 */
+    /* 结果框容器：绝对左对齐，白字 + 红色立体描边 */
     .result-box { 
       padding: 12px; 
-      background: #f1f3f5; 
+      background: #212529; /* 深色背景让白字红描边效果完美展现 */
       border-radius: 4px; 
       min-height: 90px; 
       font-size: 16px; 
-      color: #00e676; /* 亮绿色文字 */
+      color: #ffffff; /* 白色文字 */
       word-break: break-all; 
       white-space: pre-wrap; 
       cursor: default; 
@@ -52,13 +52,13 @@
         -1px  1px 0 #ff1744,  
          1px  1px 0 #ff1744;
     }
-    .result-box:hover { background: #e9ecef; }
+    .result-box:hover { background: #343a40; }
     
     /* 自定义悬浮提示卡片样式 */
     .custom-tooltip {
       visibility: hidden;
-      background-color: #212529;
-      color: #00e676;
+      background-color: #111;
+      color: #ffffff;
       text-align: left;
       border-radius: 6px;
       padding: 8px 12px;
@@ -66,7 +66,7 @@
       z-index: 10;
       bottom: 110%;
       left: 10px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
       font-size: 14px;
       line-height: 1.4;
       opacity: 0;
@@ -84,7 +84,7 @@
       left: 20px;
       border-width: 6px;
       border-style: solid;
-      border-color: #212529 transparent transparent transparent;
+      border-color: #111 transparent transparent transparent;
     }
     .result-box:hover .custom-tooltip {
       visibility: visible;
@@ -231,7 +231,7 @@
   </div>
 
   <script>
-    // 终极精准拼接函数：保护时间冒号、保留行首编号和空格、过滤多余标点
+    // 终极完美对齐与标点保护函数：原封不动保留行首编号、顿号/点及时间冒号
     function translateText(text, sourceLang, targetLang) {
       return (async () => {
         const lines = text.split('\n');
@@ -247,11 +247,11 @@
           let prefixPart = "";
           let contentToSend = trimmedLine;
 
-          // 1. 剥离行首编号及后面的点/顿号（例如 "1." 或 "2、"）
-          const prefixMatch = trimmedLine.match(/^(\d+[\.,、,]?)\s*(.*)/);
+          // 1. 精准捕获并剥离行首的数字及后面的标点（支持 .、和顿号）
+          const prefixMatch = trimmedLine.match(/^(\d+[\.,、，]?)\s*(.*)/);
           if (prefixMatch && prefixMatch[1]) {
-            prefixPart = prefixMatch[1]; 
-            contentToSend = prefixMatch[2]; 
+            prefixPart = prefixMatch[1]; // 完美获取原文的标点（例如 "1." 或 "2、"）
+            contentToSend = prefixMatch[2]; // 剩下的正文拿去翻译
           }
 
           try {
@@ -278,7 +278,7 @@
                 });
               }
 
-              // 3. 清除翻译结果中除时间冒号 `:` 之外的所有标点符号
+              // 3. 清除翻译结果中除时间冒号 `:` 之外的所有标点符号（问号、句号、逗号等）
               let cleanedBody = translated
                 .replace(/[，,。．?!？！;；""''""（）()\[\]{}《》〈〉-]/g, ' ')
                 .replace(/[\p{P}\p{S}]/gu, (match) => {
@@ -287,10 +287,10 @@
 
               cleanedBody = cleanedBody.replace(/\s+/g, ' ').trim();
 
-              // 4. 将剥离出来的行首编号与翻译正文“强行用一个标准的空格”拼起来
+              // 4. 将剥离出来的行首原样编号（带点或顿号）与翻译正文“强行用空格”完美拼接！
               let finalLine = cleanedBody;
               if (prefixPart) {
-                cleanedBody = cleanedBody.replace(/^\d+[\.,、,]?\s*/, '');
+                cleanedBody = cleanedBody.replace(/^\d+[\.,、，]?\s*/, '');
                 finalLine = prefixPart + " " + cleanedBody;
               }
 
