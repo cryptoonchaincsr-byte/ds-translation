@@ -30,7 +30,7 @@
     option { color: #333; padding: 5px; }
     .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; margin-top: 10px; }
     
-    /* 结果框容器：确保完美支持跨行换行与绿色字体 */
+    /* 结果框容器：完美跨行与绿色字体 */
     .result-box { padding: 12px; background: #f1f3f5; border-radius: 4px; min-height: 90px; font-size: 16px; color: #28a745; word-break: break-all; white-space: pre-wrap; cursor: default; position: relative; font-weight: bold; }
     .result-box:hover { background: #e9ecef; }
     
@@ -153,7 +153,7 @@
       </div>
 
       <div class="result-header">
-        <span class="label">欧洲语种翻译结果（完美跨行）：</span>
+        <span class="label">欧洲语种翻译结果（完美对齐）：</span>
         <div class="btn-group">
           <button id="copyLeftBtn" class="copy-btn" onclick="copyText('textLeft', 'copyLeftBtn')">一键复制</button>
         </div>
@@ -197,7 +197,7 @@
       </div>
 
       <div class="result-header">
-        <span class="label">亚洲主要语言翻译结果（完美跨行）：</span>
+        <span class="label">亚洲主要语言翻译结果（完美对齐）：</span>
         <div class="btn-group">
           <button id="copyRightBtn" class="copy-btn" onclick="copyText('textRight', 'copyRightBtn')">一键复制</button>
         </div>
@@ -210,7 +210,7 @@
   </div>
 
   <script>
-    // 优化：对单行文本进行清理，同时全方位保护时间冒号和数字后的顿号/点
+    // 完美的单行符号修复函数（杜绝缩进和多余空格）
     function processLine(translatedText, originalLine) {
       let cleaned = translatedText
         .replace(/[\p{P}\p{S}]/gu, '')
@@ -229,20 +229,19 @@
         });
       }
 
-      // 2. 恢复该行中数字后的顿号或点（如 1、 2.），自动兼容英文翻译后数字与文字紧挨着的情况
-      const numPuncMatches = originalLine.match(/\d+[\.,、，]/g);
-      if (numPuncMatches) {
-        numPuncMatches.forEach(np => {
-          const num = np.match(/\d+/)[0];
-          const punc = np.match(/[\.,、，]/)[0];
-          // 匹配数字开头的模式，并在数字后面强行补回原有的符号和空格
-          const regex = new RegExp(`(^|\\b)${num}\\s*`, 'g');
-          cleaned = cleaned.replace(regex, `$1${num}${punc} `);
-        });
+      // 2. 严格检查原句开头是否有“数字+顿号/点”（如 1、 2.）
+      const prefixMatch = originalLine.match(/^(\d+)([\.,、，])/);
+      if (prefixMatch) {
+        const num = prefixMatch[1];
+        const punc = prefixMatch[2];
+        
+        // 去掉译文中可能自带的乱七八糟前缀，让它重新从最左侧紧贴顶格开始
+        cleaned = cleaned.replace(new RegExp(`^\\s*(${num})?\\s*`), '');
+        // 强制在行首完美拼接：数字 + 标点 + 一个空格 + 内容
+        cleaned = `${num}${punc} ${cleaned}`;
       }
 
-      // 整理多余空格
-      return cleaned.replace(/\s+/g, ' ').trim();
+      return cleaned.trim();
     }
 
     // 按行拆分、逐行翻译并用 \n 拼接
@@ -253,7 +252,7 @@
       for (let line of lines) {
         const trimmedLine = line.trim();
         if (!trimmedLine) {
-          translatedLines.push(""); // 保留空行
+          translatedLines.push(""); 
           continue;
         }
 
@@ -299,7 +298,7 @@
 
       const finalResult = await translateText(text, sourceLang, targetLang);
       textSpan.innerText = finalResult;
-      tooltip.innerText = "原文本：\n" + text;
+      tooltip.innerText = "原文本:\n" + text;
     }
 
     async function translateRightToLeft() {
@@ -318,7 +317,7 @@
 
       const finalResult = await translateText(text, sourceLang, targetLang);
       textSpan.innerText = finalResult;
-      tooltip.innerText = "原文本：\n" + text;
+      tooltip.innerText = "原文本:\n" + text;
     }
 
     function clearContent(inputId, outputSpanId, tooltipId) {
