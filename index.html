@@ -210,7 +210,7 @@
   </div>
 
   <script>
-    // 零缩进、完美对齐的单行修复函数
+    // 严丝合缝的单行文本清洗与修复函数
     function processLine(translatedText, originalLine) {
       let cleaned = translatedText
         .replace(/[\p{P}\p{S}]/gu, '')
@@ -229,16 +229,16 @@
         });
       }
 
-      // 2. 严格判断：只有当【原句确实以数字+顿号/点开头】时，才做精准的对齐修复
-      if (/^\d+[\.,、，]/.test(originalLine.trim())) {
-        const prefixMatch = originalLine.match(/^(\d+)([\.,、，])/);
+      // 2. 只有当【原句确实以数字+顿号/点开头】时，才把对应标点完美补回，绝不影响普通文本
+      const trimmedOrig = originalLine.trim();
+      if (/^\d+[\.,、，]/.test(trimmedOrig)) {
+        const prefixMatch = trimmedOrig.match(/^(\d+)([\.,、，])/);
         if (prefixMatch) {
           const num = prefixMatch[1];
           const punc = prefixMatch[2];
           
-          // 清除可能重复的开头数字
-          cleaned = cleaned.replace(new RegExp(`^\\s*(${num})?\\s*`), '');
-          // 强制顶格拼接：绝不产生多余缩进
+          // 彻底抹除开头的冗余字符，然后绝对顶格拼接
+          cleaned = cleaned.replace(new RegExp(`^\\s*(${num})?\\s*`, 'g'), '');
           cleaned = `${num}${punc} ${cleaned}`;
         }
       }
@@ -246,7 +246,7 @@
       return cleaned.trim();
     }
 
-    // 按行拆分、逐行翻译并用 \n 拼接
+    // 按行拆分、逐行翻译并用 \n 拼接（强制对输入文本每一行做严格 trim）
     async function translateText(text, sourceLang, targetLang) {
       const lines = text.split('\n');
       const translatedLines = [];
