@@ -232,7 +232,7 @@
   </div>
 
   <script>
-    // 宗师级防丢数字、防丢小数点的智能隔离清洗函数（加强版）
+    // 工业级百分百防丢数字、防丢小数点的终极清洗函数
     function translateText(text, sourceLang, targetLang) {
       return (async () => {
         const lines = text.split('\n');
@@ -248,7 +248,7 @@
           let prefixPart = "";
           let contentToSend = trimmedLine;
 
-          // 1. 提取行首编号（如 1. 2、 3. 等）
+          // 1. 精准提取行首编号（支持 1. 2、 3. / 等）
           const prefixMatch = trimmedLine.match(/^(\d+[\.,、，\/]?)\s*(.*)/);
           if (prefixMatch && prefixMatch[1]) {
             prefixPart = prefixMatch[1]; 
@@ -260,10 +260,16 @@
             continue;
           }
 
-          // 2. 【核心无敌隔离保护】：把正文中的带小数点的数字、百分号范围、时间完美挖出来！
+          // 2. 【终极安全隔离】：如果正文里完全是百分号、小数点、数字、连字符、时间（例如 "12.53%" 或 "12.52%-100%"），直接原样输出，绝不让谷歌翻译碰！
+          const isOnlyNumbersAndSymbols = /^[\d\.\%\-\~\s\:\：\至]+$/.test(contentToSend);
+          if (isOnlyNumbersAndSymbols) {
+            translatedLines.push(trimmedLine);
+            continue;
+          }
+
+          // 3. 针对夹杂在文字中的数字/小数/百分号（如 "利润12.52%-100%"），用占位符挖空保护
           const placeholders = [];
-          // 匹配：时间(18:25)、小数范围(12.52%-100%)、普通小数带百分号(12.53%)、整数百分号(100%)等
-          const protectedContent = contentToSend.replace(/(\d+[:：]\d+|\d+\.\d+%?\s*[-~至]\s*\d+(?:\.\d+)?%?|\d+\.\d+%?|\d+%)?/g, (match) => {
+          const protectedContent = contentToSend.replace(/(\d+[:：]\d+|\d+(?:\.\d+)?%?\s*[-~至]\s*\d+(?:\.\d+)?%?|\d+\.\d+%?|\d+%)?/g, (match) => {
             if (!match.trim()) return match;
             placeholders.push(match);
             return `__PLACEHOLDER_${placeholders.length - 1}__`;
@@ -280,12 +286,12 @@
                 if (item[0]) translated += item[0];
               });
 
-              // 3. 【完美无损拼回】：把保护好的完整数字原封不动塞回原位
+              // 4. 将被保护的数字、小数点、百分号完美拼回
               placeholders.forEach((val, idx) => {
                 translated = translated.replace(`__PLACEHOLDER_${idx}__`, val);
               });
 
-              // 4. 仅清理多余中文标点，严禁破坏数字、百分号、小数点、连接符、冒号
+              // 5. 清理多余标点，保留数字、小数点、百分号、连字符、冒号
               let cleanedBody = translated
                 .replace(/[，,。?!？！;；""''""（）()\[\]{}《》〈〉]/g, ' ') 
                 .replace(/[\p{P}\p{S}]/gu, (match) => {
@@ -297,7 +303,7 @@
 
               cleanedBody = cleanedBody.replace(/\s+/g, ' ').trim();
 
-              // 5. 组装行首编号
+              // 6. 完美组装行首编号
               let finalLine = cleanedBody;
               if (prefixPart) {
                 cleanedBody = cleanedBody.replace(/^\d+[\.,、，\/]?\s*/, '');
