@@ -30,14 +30,14 @@
     option { color: #333; padding: 5px; }
     .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; margin-top: 10px; }
     
-    /* 结果框容器：绝对左对齐，坚决不缩进 */
+    /* 结果框容器：绝对左对齐，绿字 + 红描边 */
     .result-box { 
       padding: 12px; 
       background: #f1f3f5; 
       border-radius: 4px; 
       min-height: 90px; 
       font-size: 16px; 
-      color: #28a745; 
+      color: #00e676; /* 亮绿色文字 */
       word-break: break-all; 
       white-space: pre-wrap; 
       cursor: default; 
@@ -45,6 +45,12 @@
       font-weight: bold; 
       text-align: left !important;
       direction: ltr !important;
+      /* 红色立体描边效果 */
+      text-shadow: 
+        -1px -1px 0 #ff1744,  
+         1px -1px 0 #ff1744,  
+        -1px  1px 0 #ff1744,  
+         1px  1px 0 #ff1744;
     }
     .result-box:hover { background: #e9ecef; }
     
@@ -52,7 +58,7 @@
     .custom-tooltip {
       visibility: hidden;
       background-color: #212529;
-      color: #28a745;
+      color: #00e676;
       text-align: left;
       border-radius: 6px;
       padding: 8px 12px;
@@ -69,6 +75,7 @@
       pointer-events: none;
       font-weight: bold;
       white-space: pre-wrap;
+      text-shadow: none; /* 提示卡片内不需要描边 */
     }
     .custom-tooltip::after {
       content: "";
@@ -253,7 +260,6 @@
               if (timeMatches) {
                 timeMatches.forEach(tStr => {
                   const correctTime = tStr.replace('：', ':');
-                  // 如果翻译结果把时间变成没冒号的（比如 1825），强行在译文中找对应位置补上冒号
                   const parts = correctTime.split(':');
                   const uncolonReg = new RegExp(`\\b${parts[0]}\\s*${parts[1]}\\b`, 'g');
                   if (!translated.includes(correctTime)) {
@@ -266,23 +272,18 @@
               const prefixMatch = trimmedLine.match(/^(\d+[\.,、，\u104A\u104B]?)\s*(.*)/);
               if (prefixMatch && prefixMatch[1]) {
                 const originalPrefix = prefixMatch[1];
-                // 如果译文开头没有这个编号，或者被吞了，强行把原编号贴回最前面
                 const cleanPrefixNum = originalPrefix.replace(/[\.,、，]/g, '');
                 if (!translated.startsWith(originalPrefix) && !translated.startsWith(cleanPrefixNum)) {
-                  // 去掉译文可能自带的乱七八糟前缀数字
                   translated = translated.replace(/^[\d\s\.,、，]+\s*/, '');
                   translated = originalPrefix + " " + translated;
                 }
               }
 
-              // 3. 抹除所有其他不该出现的标点符号（如问号 ?、句号 .、逗号 , 等）
-              // 但完美保留时间冒号 `:` 和数字后面的 `.` / `、`
+              // 3. 抹除所有其他不该出现的标点符号，保留时间冒号 `:` 和数字后面的 `.` / `、`
               let finalCleaned = translated
                 .replace(/[，,。．?!？！;；""''""（）()\[\]{}《》〈〉-]/g, ' ')
                 .replace(/[\p{P}\p{S}]/gu, (match) => {
-                  // 如果是时间冒号，保留
                   if (match === ':' || match === '：') return ':';
-                  // 如果是数字后面合法的点或顿号，保留
                   return '';
                 });
 
