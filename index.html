@@ -30,10 +30,45 @@
     option { color: #333; padding: 5px; }
     .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; margin-top: 10px; }
     
-    /* 结果框样式（增加提示光标与样式） */
+    /* 结果框容器：必须设为 relative 以便精确定位浮动提示框 */
     .result-box { padding: 12px; background: #f1f3f5; border-radius: 4px; min-height: 90px; font-size: 16px; color: #333; word-break: break-all; white-space: pre-wrap; cursor: pointer; position: relative; }
     .result-box:hover { background: #e9ecef; }
     
+    /* 自定义悬浮提示卡片样式 */
+    .custom-tooltip {
+      visibility: hidden;
+      background-color: #212529;
+      color: #fff;
+      text-align: left;
+      border-radius: 6px;
+      padding: 8px 12px;
+      position: absolute;
+      z-index: 10;
+      bottom: 110%;
+      left: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      font-size: 14px;
+      line-height: 1.4;
+      opacity: 0;
+      transition: opacity 0.2s ease-in-out;
+      max-width: 90%;
+      pointer-events: none;
+    }
+    .custom-tooltip::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 20px;
+      border-width: 6px;
+      border-style: solid;
+      border-color: #212529 transparent transparent transparent;
+    }
+    /* 鼠标移上去时立刻显示提示卡片 */
+    .result-box:hover .custom-tooltip {
+      visibility: visible;
+      opacity: 1;
+    }
+
     .label { font-weight: bold; color: #555; display: inline-block; }
     .btn-group { display: flex; gap: 10px; align-items: center; }
     .copy-btn { padding: 6px 15px; background: #007bff; color: #fff; border: none; border-radius: 4px; font-size: 14px; cursor: pointer; transition: background 0.2s; }
@@ -61,7 +96,7 @@
         <button class="clear-btn" onclick="clearContent('inputLeft', 'outputLeft')">✕ 清空</button>
       </div>
       <textarea id="inputLeft" placeholder="在此输入中文、缅甸语、老挝语或泰语..."></textarea>
-      <div class="tip">⚡ 已开启全自动实时翻译与去标点（提示：鼠标悬停或点击结果可看原文本）</div>
+      <div class="tip">⚡ 已开启实时翻译（提示：悬停或点击结果可看原文本）</div>
       
       <div style="margin-top: 10px;">
         <span class="label">源语言：</span>
@@ -122,7 +157,11 @@
           <button id="copyLeftBtn" class="copy-btn" onclick="copyText('outputLeft', 'copyLeftBtn')">一键复制</button>
         </div>
       </div>
-      <div id="outputLeft" class="result-box" onclick="showOriginal('inputLeft', 'outputLeft', '源文本')">等待输入...</div>
+      <!-- 结果框内嵌自定义提示气泡 -->
+      <div id="outputLeft" class="result-box" onclick="showOriginal('inputLeft', 'outputLeft', '源文本')">
+        等待输入...
+        <span id="tooltipLeft" class="custom-tooltip">暂无原文</span>
+      </div>
     </div>
 
     <!-- 右侧面板 -->
@@ -132,7 +171,7 @@
         <button class="clear-btn" onclick="clearContent('inputRight', 'outputRight')">✕ 清空</button>
       </div>
       <textarea id="inputRight" placeholder="在此输入任意外文或欧洲语言..."></textarea>
-      <div class="tip">⚡ 已开启全自动实时翻译与去标点（提示：鼠标悬停或点击结果可看原文本）</div>
+      <div class="tip">⚡ 已开启实时翻译（提示：悬停或点击结果可看原文本）</div>
       
       <div style="margin-top: 10px;">
         <span class="label">源语言：</span>
@@ -163,7 +202,11 @@
           <button id="copyRightBtn" class="copy-btn" onclick="copyText('outputRight', 'copyRightBtn')">一键复制</button>
         </div>
       </div>
-      <div id="outputRight" class="result-box" onclick="showOriginal('inputRight', 'outputRight', '源文本')">等待输入...</div>
+      <!-- 结果框内嵌自定义提示气泡 -->
+      <div id="outputRight" class="result-box" onclick="showOriginal('inputRight', 'outputRight', '源文本')">
+        等待输入...
+        <span id="tooltipRight" class="custom-tooltip">暂无原文</span>
+      </div>
     </div>
   </div>
 
@@ -183,13 +226,14 @@
       const sourceLang = document.getElementById('sourceLangLeft').value;
       const targetLang = document.getElementById('targetLangLeft').value;
       const output = document.getElementById('outputLeft');
+      const tooltip = document.getElementById('tooltipLeft');
 
       if (!text) {
-        output.innerText = "等待输入...";
-        output.title = "";
+        output.firstChild.nodeValue = "等待输入...";
+        tooltip.innerText = "暂无原文";
         return;
       }
-      output.innerText = "实时翻译中...";
+      output.firstChild.nodeValue = "实时翻译中...";
 
       try {
         const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
@@ -202,14 +246,14 @@
             if (item[0]) translated += item[0];
           });
           const cleanResult = removePunctuation(translated);
-          output.innerText = cleanResult;
-          // 悬停时自动显示对应的源文本
-          output.title = "点击或悬停查看原文本:\n" + text;
+          output.firstChild.nodeValue = cleanResult;
+          // 实时更新悬浮卡片显示的内容
+          tooltip.innerText = "原文本：\n" + text;
         } else {
-          output.innerText = "翻译失败，请重试";
+          output.firstChild.nodeValue = "翻译失败，请重试";
         }
       } catch (e) {
-        output.innerText = "网络连接异常，请检查网络";
+        output.firstChild.nodeValue = "网络连接异常，请检查网络";
       }
     }
 
@@ -218,13 +262,14 @@
       const sourceLang = document.getElementById('sourceLangRight').value;
       const targetLang = document.getElementById('targetLangRight').value;
       const output = document.getElementById('outputRight');
+      const tooltip = document.getElementById('tooltipRight');
 
       if (!text) {
-        output.innerText = "等待输入...";
-        output.title = "";
+        output.firstChild.nodeValue = "等待输入...";
+        tooltip.innerText = "暂无原文";
         return;
       }
-      output.innerText = "实时翻译中...";
+      output.firstChild.nodeValue = "实时翻译中...";
 
       try {
         const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
@@ -237,23 +282,23 @@
             if (item[0]) translated += item[0];
           });
           const cleanResult = removePunctuation(translated);
-          output.innerText = cleanResult;
-          // 悬停时自动显示对应的源文本
-          output.title = "点击或悬停查看原文本:\n" + text;
+          output.firstChild.nodeValue = cleanResult;
+          // 实时更新悬浮卡片显示的内容
+          tooltip.innerText = "原文本：\n" + text;
         } else {
-          output.innerText = "翻译失败，请重试";
+          output.firstChild.nodeValue = "翻译失败，请重试";
         }
       } catch (e) {
-        output.innerText = "网络连接异常，请检查网络";
+        output.firstChild.nodeValue = "网络连接异常，请检查网络";
       }
     }
 
-    // 点击翻译结果时，弹窗提示或显示对应的原文内容
+    // 点击翻译结果时，弹窗显示原文内容
     function showOriginal(inputId, outputId, labelName) {
       const inputText = document.getElementById(inputId).value.trim();
-      const outputText = document.getElementById(outputId).innerText;
+      const outputNodeText = document.getElementById(outputId).firstChild.nodeValue;
 
-      if (!inputText || outputText.includes("等待输入") || outputText.includes("实时翻译中")) {
+      if (!inputText || outputNodeText.includes("等待输入") || outputNodeText.includes("实时翻译中")) {
         return;
       }
       alert(`【${labelName}详情】\n\n${inputText}`);
@@ -262,13 +307,19 @@
     // 一键清空输入框和结果框的内容
     function clearContent(inputId, outputId) {
       document.getElementById(inputId).value = "";
-      const output = document.getElementById(outputId);
-      output.innerText = "等待输入...";
-      output.title = "";
+      if(outputId === 'outputLeft') {
+        document.getElementById('outputLeft').firstChild.nodeValue = "等待输入...";
+        document.getElementById('tooltipLeft').innerText = "暂无原文";
+      } else {
+        document.getElementById('outputRight').firstChild.nodeValue = "等待输入...";
+        document.getElementById('tooltipRight').innerText = "暂无原文";
+      }
     }
 
     function copyText(outputId, btnId) {
-      const outputText = document.getElementById(outputId).innerText;
+      const outputDiv = document.getElementById(outputId);
+      // 获取纯文本内容（排除内部的span提示标签）
+      const outputText = outputDiv.firstChild.nodeValue ? outputDiv.firstChild.nodeValue.trim() : "";
       const copyBtn = document.getElementById(btnId);
 
       if (!outputText || outputText.includes("等待输入") || outputText.includes("实时翻译中") || outputText.includes("异常") || outputText.includes("失败")) {
