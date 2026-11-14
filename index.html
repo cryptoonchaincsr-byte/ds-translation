@@ -193,7 +193,7 @@
         <button class="clear-btn" onclick="clearContent('inputRight', 'outputRight', 'tooltipRight')">✕ 清空</button>
       </div>
       <textarea id="inputRight" placeholder="在此输入任意外文或欧洲语言..."></textarea>
-      <div class="tip">⚡ 已开启实时翻译（提示：悬停结果可看原文本）</div>
+      <div class="tip">⚡ 已开启实时翻译（提示：悬停结果可看原原文）</div>
       
       <div style="margin-top: 10px;">
         <span class="label">源语言：</span>
@@ -232,7 +232,7 @@
   </div>
 
   <script>
-    // 宗师级防丢字、防丢小数点、完美对齐清洗函数
+    // 宗师级防丢数字、防丢小数点的智能隔离清洗函数
     function translateText(text, sourceLang, targetLang) {
       return (async () => {
         const lines = text.split('\n');
@@ -248,21 +248,30 @@
           let prefixPart = "";
           let contentToSend = trimmedLine;
 
-          // 1. 分离行首编号（如 1. 2、 3. / 等）
+          // 1. 提取行首编号（如 1. 2、 3. 等）
           const prefixMatch = trimmedLine.match(/^(\d+[\.,、，\/]?)\s*(.*)/);
           if (prefixMatch && prefixMatch[1]) {
             prefixPart = prefixMatch[1]; 
             contentToSend = prefixMatch[2] ? prefixMatch[2].trim() : ""; 
           }
 
-          // 如果没有正文（例如只有 "3、"），直接原样返回
           if (!contentToSend) {
             translatedLines.push(trimmedLine);
             continue;
           }
 
+          // 2. 【核心隔离保护】：把正文中的数字范围、小数、百分号、时间（如 12.52%-100% 或 18:25）先挖出来打上安全标记！
+          // 匹配：时间、带小数点的数字范围、百分号等
+          const placeholders = [];
+          let protectedContent = contentToSend.replace(/(\d+[:：]\d+|\d+(?:\.\d+)?%?\s*[-~至]\s*\d+(?:\.\d+)?%?|\d+\.\d+%?|\d+%)?/g, (match) => {
+            if (!match.trim()) return match;
+            placeholders.push(match);
+            return `__PLACEHOLDER_${placeholders.length - 1}__`;
+          });
+
           try {
-            const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(contentToSend)}`;
+            // 此时送去翻译的只有纯文字部分（例如把数字挖空后只翻译 "利润" 两个字），绝对不会被谷歌当成公式破坏！
+            const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(protectedContent)}`;
             const res = await fetch(url);
             const data = await res.json();
             
@@ -272,24 +281,15 @@
                 if (item[0]) translated += item[0];
               });
 
-              // 2. 保护时间冒号（如 18:25）
-              const timeMatches = trimmedLine.match(/\d+[:：]\d+/g);
-              if (timeMatches) {
-                timeMatches.forEach(tStr => {
-                  const correctTime = tStr.replace('：', ':');
-                  const parts = correctTime.split(':');
-                  const uncolonReg = new RegExp(`\\b${parts[0]}\\s*${parts[1]}\\b`, 'g');
-                  if (!translated.includes(correctTime)) {
-                    translated = translated.replace(uncolonReg, correctTime);
-                  }
-                });
-              }
+              // 3. 【无损拼回】：把刚才挖出来的原装数字、百分号、小数点、区间完美无损地塞回翻译好的文字里！
+              placeholders.forEach((val, idx) => {
+                translated = translated.replace(`__PLACEHOLDER_${idx}__`, val);
+              });
 
-              // 3. 严格清洗标点，但【严禁抹杀】小数点(.)、连接符(-)、百分号(%)、冒号(:)
+              // 4. 清理翻译文本中多余的标点符号（但放行保护好的数字、百分号、小数点、连接符、冒号）
               let cleanedBody = translated
-                .replace(/[，,。?!？！;；""''""（）()\[\]{}《》〈〉]/g, ' ') // 去掉普通标点，但保留 . 和 -
+                .replace(/[，,。．?!？！;；""''""（）()\[\]{}《》〈〉]/g, ' ') 
                 .replace(/[\p{P}\p{S}]/gu, (match) => {
-                  // 允许保留的符号：冒号(:)、百分号(%)、小数点(.)、数字连字符(-)
                   if (match === ':' || match === '：' || match === '%' || match === '.' || match === '-') {
                     return match;
                   }
@@ -298,7 +298,7 @@
 
               cleanedBody = cleanedBody.replace(/\s+/g, ' ').trim();
 
-              // 4. 将行首编号与清洗好的正文安全拼接
+              // 5. 组装行首编号
               let finalLine = cleanedBody;
               if (prefixPart) {
                 cleanedBody = cleanedBody.replace(/^\d+[\.,、，\/]?\s*/, '');
