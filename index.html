@@ -224,7 +224,7 @@
   </div>
 
   <script>
-    // 绝对稳健的清洗函数：清理所有标点，但原封不动精准保全行首编号（如 1、 2、）和时间（如 18:25）
+    // 终极清洗函数：直接清理除冒号(:)和数字后点/顿号之外的所有多余标点
     function translateText(text, sourceLang, targetLang) {
       return (async () => {
         const lines = text.split('\n');
@@ -237,18 +237,8 @@
             continue;
           }
 
-          let prefixStr = "";
-          let contentToSend = trimmedLine;
-
-          // 1. 直接提取并剥离行首的编号（例如 "1、" 或 "2."）
-          const prefixMatch = trimmedLine.match(/^(\d+[\.,、，\u104A\u104B]?)\s*(.*)/);
-          if (prefixMatch && prefixMatch[1]) {
-            prefixStr = prefixMatch[1] + " "; // 提取编号并带上一个空格
-            contentToSend = prefixMatch[2];    // 剩下的正文拿去翻译
-          }
-
           try {
-            const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(contentToSend)}`;
+            const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(trimmedLine)}`;
             const res = await fetch(url);
             const data = await res.json();
             
@@ -258,20 +248,47 @@
                 if (item[0]) translated += item[0];
               });
 
-              // 2. 清除翻译结果中除时间冒号 `:` 以外的所有标点符号（问号、句号、逗号等）
-              // 先保护时间里的冒号
-              const timeMatches = translated.match(/\d+[:：]\d+/g);
-              
-              // 抹除所有常规标点
-              translated = translated
+              // 1. 保护原句中的时间冒号（如 18:25）
+              const timeMatches = trimmedLine.match(/\d+[:：]\d+/g);
+              if (timeMatches) {
+                timeMatches.forEach(tStr => {
+                  const correctTime = tStr.replace('：', ':');
+                  // 如果翻译结果把时间变成没冒号的（比如 1825），强行在译文中找对应位置补上冒号
+                  const parts = correctTime.split(':');
+                  const uncolonReg = new RegExp(`\\b${parts[0]}\\s*${parts[1]}\\b`, 'g');
+                  if (!translated.includes(correctTime)) {
+                    translated = translated.replace(uncolonReg, correctTime);
+                  }
+                });
+              }
+
+              // 2. 保护原句行首的数字编号及后面的顿号/点（如 1、 或 1.）
+              const prefixMatch = trimmedLine.match(/^(\d+[\.,、，\u104A\u104B]?)\s*(.*)/);
+              if (prefixMatch && prefixMatch[1]) {
+                const originalPrefix = prefixMatch[1];
+                // 如果译文开头没有这个编号，或者被吞了，强行把原编号贴回最前面
+                const cleanPrefixNum = originalPrefix.replace(/[\.,、，]/g, '');
+                if (!translated.startsWith(originalPrefix) && !translated.startsWith(cleanPrefixNum)) {
+                  // 去掉译文可能自带的乱七八糟前缀数字
+                  translated = translated.replace(/^[\d\s\.,、，]+\s*/, '');
+                  translated = originalPrefix + " " + translated;
+                }
+              }
+
+              // 3. 抹除所有其他不该出现的标点符号（如问号 ?、句号 .、逗号 , 等）
+              // 但完美保留时间冒号 `:` 和数字后面的 `.` / `、`
+              let finalCleaned = translated
                 .replace(/[，,。．?!？！;；""''""（）()\[\]{}《》〈〉-]/g, ' ')
                 .replace(/[\p{P}\p{S}]/gu, (match) => {
-                  return match === ':' || match === '：' ? ':' : '';
+                  // 如果是时间冒号，保留
+                  if (match === ':' || match === '：') return ':';
+                  // 如果是数字后面合法的点或顿号，保留
+                  return '';
                 });
 
-              // 3. 把提取出来的行首编号完美拼回最前面！
-              let finalLine = (prefixStr + translated).replace(/\s+/g, ' ').trim();
-              translatedLines.push(finalLine);
+              // 4. 收尾：压缩多余空格并去除首尾空白
+              finalCleaned = finalCleaned.replace(/\s+/g, ' ').trim().replace(/^[\s\u3000]+/, '');
+              translatedLines.push(finalCleaned);
             } else {
               translatedLines.push(trimmedLine);
             }
