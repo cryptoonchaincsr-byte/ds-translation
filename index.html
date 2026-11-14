@@ -30,7 +30,7 @@
     option { color: #333; padding: 5px; }
     .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; margin-top: 10px; }
     
-    /* 结果框容器：字体颜色为绿色，支持换行显示 */
+    /* 结果框容器：确保完美支持跨行换行与绿色字体 */
     .result-box { padding: 12px; background: #f1f3f5; border-radius: 4px; min-height: 90px; font-size: 16px; color: #28a745; word-break: break-all; white-space: pre-wrap; cursor: default; position: relative; font-weight: bold; }
     .result-box:hover { background: #e9ecef; }
     
@@ -94,7 +94,7 @@
     <div class="panel">
       <div class="input-header">
         <span class="label">🇨🇳 🇲🇲 🇱🇦 🇹🇭 输入主要语言文本：</span>
-        <button class="clear-btn" onclick="clearContent('inputLeft', 'outputLeft')">✕ 清空</button>
+        <button class="clear-btn" onclick="clearContent('inputLeft', 'outputLeft', 'tooltipLeft')">✕ 清空</button>
       </div>
       <textarea id="inputLeft" placeholder="在此输入中文、缅甸语、老挝语或泰语..."></textarea>
       <div class="tip">⚡ 已开启实时翻译（提示：悬停结果可看原文本）</div>
@@ -155,11 +155,12 @@
       <div class="result-header">
         <span class="label">欧洲语种翻译结果（完美跨行）：</span>
         <div class="btn-group">
-          <button id="copyLeftBtn" class="copy-btn" onclick="copyText('outputLeft', 'copyLeftBtn')">一键复制</button>
+          <button id="copyLeftBtn" class="copy-btn" onclick="copyText('textLeft', 'copyLeftBtn')">一键复制</button>
         </div>
       </div>
+      <!-- 用单独的 span 包裹翻译文本，防止提示框被覆盖 -->
       <div id="outputLeft" class="result-box">
-        等待输入...
+        <span id="textLeft">等待输入...</span>
         <span id="tooltipLeft" class="custom-tooltip">暂无原文</span>
       </div>
     </div>
@@ -168,7 +169,7 @@
     <div class="panel">
       <div class="input-header">
         <span class="label">🌐 输入或粘贴外文/自动检测：</span>
-        <button class="clear-btn" onclick="clearContent('inputRight', 'outputRight')">✕ 清空</button>
+        <button class="clear-btn" onclick="clearContent('inputRight', 'outputRight', 'tooltipRight')">✕ 清空</button>
       </div>
       <textarea id="inputRight" placeholder="在此输入任意外文或欧洲语言..."></textarea>
       <div class="tip">⚡ 已开启实时翻译（提示：悬停结果可看原文本）</div>
@@ -199,11 +200,12 @@
       <div class="result-header">
         <span class="label">亚洲主要语言翻译结果（完美跨行）：</span>
         <div class="btn-group">
-          <button id="copyRightBtn" class="copy-btn" onclick="copyText('outputRight', 'copyRightBtn')">一键复制</button>
+          <button id="copyRightBtn" class="copy-btn" onclick="copyText('textRight', 'copyRightBtn')">一键复制</button>
         </div>
       </div>
+      <!-- 用单独的 span 包裹翻译文本，防止提示框被覆盖 -->
       <div id="outputRight" class="result-box">
-        等待输入...
+        <span id="textRight">等待输入...</span>
         <span id="tooltipRight" class="custom-tooltip">暂无原文</span>
       </div>
     </div>
@@ -243,7 +245,7 @@
       return cleaned;
     }
 
-    // 按行拆分、逐行翻译并拼接，以实现完美的跨行效果
+    // 按行拆分、逐行翻译并用 \n 拼接
     async function translateText(text, sourceLang, targetLang) {
       const lines = text.split('\n');
       const translatedLines = [];
@@ -251,7 +253,7 @@
       for (let line of lines) {
         const trimmedLine = line.trim();
         if (!trimmedLine) {
-          translatedLines.push(""); // 保持空行
+          translatedLines.push(""); // 保留空行
           continue;
         }
 
@@ -285,18 +287,18 @@
       const text = document.getElementById('inputLeft').value;
       const sourceLang = document.getElementById('sourceLangLeft').value;
       const targetLang = document.getElementById('targetLangLeft').value;
-      const output = document.getElementById('outputLeft');
+      const textSpan = document.getElementById('textLeft');
       const tooltip = document.getElementById('tooltipLeft');
 
       if (!text.trim()) {
-        output.firstChild.nodeValue = "等待输入...";
+        textSpan.innerText = "等待输入...";
         tooltip.innerText = "暂无原文";
         return;
       }
-      output.firstChild.nodeValue = "实时翻译中...";
+      textSpan.innerText = "实时翻译中...";
 
       const finalResult = await translateText(text, sourceLang, targetLang);
-      output.firstChild.nodeValue = finalResult;
+      textSpan.innerText = finalResult;
       tooltip.innerText = "原文本：\n" + text;
     }
 
@@ -304,35 +306,30 @@
       const text = document.getElementById('inputRight').value;
       const sourceLang = document.getElementById('sourceLangRight').value;
       const targetLang = document.getElementById('targetLangRight').value;
-      const output = document.getElementById('outputRight');
+      const textSpan = document.getElementById('textRight');
       const tooltip = document.getElementById('tooltipRight');
 
       if (!text.trim()) {
-        output.firstChild.nodeValue = "等待输入...";
+        textSpan.innerText = "等待输入...";
         tooltip.innerText = "暂无原文";
         return;
       }
-      output.firstChild.nodeValue = "实时翻译中...";
+      textSpan.innerText = "实时翻译中...";
 
       const finalResult = await translateText(text, sourceLang, targetLang);
-      output.firstChild.nodeValue = finalResult;
+      textSpan.innerText = finalResult;
       tooltip.innerText = "原文本：\n" + text;
     }
 
-    function clearContent(inputId, outputId) {
+    function clearContent(inputId, outputSpanId, tooltipId) {
       document.getElementById(inputId).value = "";
-      if(outputId === 'outputLeft') {
-        document.getElementById('outputLeft').firstChild.nodeValue = "等待输入...";
-        document.getElementById('tooltipLeft').innerText = "暂无原文";
-      } else {
-        document.getElementById('outputRight').firstChild.nodeValue = "等待输入...";
-        document.getElementById('tooltipRight').innerText = "暂无原文";
-      }
+      document.getElementById(outputSpanId).innerText = "等待输入...";
+      document.getElementById(tooltipId).innerText = "暂无原文";
     }
 
-    function copyText(outputId, btnId) {
-      const outputDiv = document.getElementById(outputId);
-      const outputText = outputDiv.firstChild.nodeValue ? outputDiv.firstChild.nodeValue.trim() : "";
+    function copyText(textSpanId, btnId) {
+      const textSpan = document.getElementById(textSpanId);
+      const outputText = textSpan.innerText ? textSpan.innerText.trim() : "";
       const copyBtn = document.getElementById(btnId);
 
       if (!outputText || outputText.includes("等待输入") || outputText.includes("实时翻译中") || outputText.includes("异常") || outputText.includes("失败")) {
