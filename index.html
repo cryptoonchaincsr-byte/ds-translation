@@ -29,7 +29,11 @@
     optgroup { font-weight: bold; color: #007bff; }
     option { color: #333; padding: 5px; }
     .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; margin-top: 10px; }
-    .result-box { padding: 12px; background: #f1f3f5; border-radius: 4px; min-height: 90px; font-size: 16px; color: #333; word-break: break-all; white-space: pre-wrap; }
+    
+    /* 结果框样式（增加提示光标与样式） */
+    .result-box { padding: 12px; background: #f1f3f5; border-radius: 4px; min-height: 90px; font-size: 16px; color: #333; word-break: break-all; white-space: pre-wrap; cursor: pointer; position: relative; }
+    .result-box:hover { background: #e9ecef; }
+    
     .label { font-weight: bold; color: #555; display: inline-block; }
     .btn-group { display: flex; gap: 10px; align-items: center; }
     .copy-btn { padding: 6px 15px; background: #007bff; color: #fff; border: none; border-radius: 4px; font-size: 14px; cursor: pointer; transition: background 0.2s; }
@@ -57,7 +61,7 @@
         <button class="clear-btn" onclick="clearContent('inputLeft', 'outputLeft')">✕ 清空</button>
       </div>
       <textarea id="inputLeft" placeholder="在此输入中文、缅甸语、老挝语或泰语..."></textarea>
-      <div class="tip">⚡ 已开启全自动实时翻译与去标点</div>
+      <div class="tip">⚡ 已开启全自动实时翻译与去标点（提示：鼠标悬停或点击结果可看原文本）</div>
       
       <div style="margin-top: 10px;">
         <span class="label">源语言：</span>
@@ -118,7 +122,7 @@
           <button id="copyLeftBtn" class="copy-btn" onclick="copyText('outputLeft', 'copyLeftBtn')">一键复制</button>
         </div>
       </div>
-      <div id="outputLeft" class="result-box">等待输入...</div>
+      <div id="outputLeft" class="result-box" onclick="showOriginal('inputLeft', 'outputLeft', '源文本')">等待输入...</div>
     </div>
 
     <!-- 右侧面板 -->
@@ -128,7 +132,7 @@
         <button class="clear-btn" onclick="clearContent('inputRight', 'outputRight')">✕ 清空</button>
       </div>
       <textarea id="inputRight" placeholder="在此输入任意外文或欧洲语言..."></textarea>
-      <div class="tip">⚡ 已开启全自动实时翻译与去标点</div>
+      <div class="tip">⚡ 已开启全自动实时翻译与去标点（提示：鼠标悬停或点击结果可看原文本）</div>
       
       <div style="margin-top: 10px;">
         <span class="label">源语言：</span>
@@ -159,7 +163,7 @@
           <button id="copyRightBtn" class="copy-btn" onclick="copyText('outputRight', 'copyRightBtn')">一键复制</button>
         </div>
       </div>
-      <div id="outputRight" class="result-box">等待输入...</div>
+      <div id="outputRight" class="result-box" onclick="showOriginal('inputRight', 'outputRight', '源文本')">等待输入...</div>
     </div>
   </div>
 
@@ -182,6 +186,7 @@
 
       if (!text) {
         output.innerText = "等待输入...";
+        output.title = "";
         return;
       }
       output.innerText = "实时翻译中...";
@@ -196,7 +201,10 @@
           data[0].forEach(item => {
             if (item[0]) translated += item[0];
           });
-          output.innerText = removePunctuation(translated);
+          const cleanResult = removePunctuation(translated);
+          output.innerText = cleanResult;
+          // 悬停时自动显示对应的源文本
+          output.title = "点击或悬停查看原文本:\n" + text;
         } else {
           output.innerText = "翻译失败，请重试";
         }
@@ -213,6 +221,7 @@
 
       if (!text) {
         output.innerText = "等待输入...";
+        output.title = "";
         return;
       }
       output.innerText = "实时翻译中...";
@@ -227,7 +236,10 @@
           data[0].forEach(item => {
             if (item[0]) translated += item[0];
           });
-          output.innerText = removePunctuation(translated);
+          const cleanResult = removePunctuation(translated);
+          output.innerText = cleanResult;
+          // 悬停时自动显示对应的源文本
+          output.title = "点击或悬停查看原文本:\n" + text;
         } else {
           output.innerText = "翻译失败，请重试";
         }
@@ -236,10 +248,23 @@
       }
     }
 
+    // 点击翻译结果时，弹窗提示或显示对应的原文内容
+    function showOriginal(inputId, outputId, labelName) {
+      const inputText = document.getElementById(inputId).value.trim();
+      const outputText = document.getElementById(outputId).innerText;
+
+      if (!inputText || outputText.includes("等待输入") || outputText.includes("实时翻译中")) {
+        return;
+      }
+      alert(`【${labelName}详情】\n\n${inputText}`);
+    }
+
     // 一键清空输入框和结果框的内容
     function clearContent(inputId, outputId) {
       document.getElementById(inputId).value = "";
-      document.getElementById(outputId).innerText = "等待输入...";
+      const output = document.getElementById(outputId);
+      output.innerText = "等待输入...";
+      output.title = "";
     }
 
     function copyText(outputId, btnId) {
