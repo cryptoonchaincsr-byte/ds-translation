@@ -30,7 +30,7 @@
     option { color: #333; padding: 5px; }
     .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; margin-top: 10px; }
     
-    /* 结果框容器：绝对左对齐，坚决不缩进 */
+    /* 结果框容器：绝对左对齐，坚决不缩进，完整保留标点与换行 */
     .result-box { 
       padding: 12px; 
       background: #f1f3f5; 
@@ -224,34 +224,21 @@
   </div>
 
   <script>
-    // 占位符转换：发往 Google 前把 “数字+顿号” 变成绝对安全不会被吞的标记
+    // 纯净按行翻译函数：完整保留用户输入的标点与格式，不作多余删减
     function translateText(text, sourceLang, targetLang) {
       return (async () => {
         const lines = text.split('\n');
         const translatedLines = [];
 
         for (let line of lines) {
-          const trimmedLine = line.replace(/^[\s\u3000]+/, '').trim();
-          if (!trimmedLine) {
+          // 如果是空行，直接保留空行以防错位
+          if (!line.trim()) {
             translatedLines.push(""); 
             continue;
           }
 
-          let lineToSend = trimmedLine;
-          let matchedNum = null;
-          let matchedPunc = null;
-
-          // 匹配行首的 数字 + 各种顿号/点
-          const prefixMatch = trimmedLine.match(/^(\d+)([\.,、，\u104A\u104B]?)\s*(.*)/);
-          if (prefixMatch && prefixMatch[2]) {
-            matchedNum = prefixMatch[1];
-            matchedPunc = prefixMatch[2];
-            // 用安全的占位符替换掉开头的编号，让 Google 纯净地只翻译后面的正文
-            lineToSend = `___NUM_${matchedNum}_PUNC___ ${prefixMatch[3]}`;
-          }
-
           try {
-            const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(lineToSend)}`;
+            const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(line)}`;
             const res = await fetch(url);
             const data = await res.json();
             
@@ -260,20 +247,13 @@
               data[0].forEach(item => {
                 if (item[0]) translated += item[0];
               });
-
-              // 如果之前有编号占位符，完美还原回来：“数字 + 顿号 + 空格 + 翻译正文”
-              if (matchedNum && matchedPunc) {
-                translated = translated.replace(/___NUM_\d+_PUNC___/g, `${matchedNum}${matchedPunc}`);
-              }
-
-              // 清理多余空格，保证左侧绝对顶格
-              let finalCleaned = translated.replace(/\s+/g, ' ').trim().replace(/^[\s\u3000]+/, '');
-              translatedLines.push(finalCleaned);
+              // 仅去除可能导致对齐偏移的行首零宽/全角不可见空白，保留所有正常标点
+              translatedLines.push(translated.replace(/^[\s\u3000]+/, ''));
             } else {
-              translatedLines.push(trimmedLine);
+              translatedLines.push(line);
             }
           } catch (e) {
-            translatedLines.push(trimmedLine);
+            translatedLines.push(line);
           }
         }
 
