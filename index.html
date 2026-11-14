@@ -30,7 +30,7 @@
     option { color: #333; padding: 5px; }
     .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; margin-top: 10px; }
     
-    /* 结果框容器：绝对左对齐，坚决不缩进，完整保留标点与换行 */
+    /* 结果框容器：绝对左对齐，坚决不缩进 */
     .result-box { 
       padding: 12px; 
       background: #f1f3f5; 
@@ -167,7 +167,7 @@
       </div>
 
       <div class="result-header">
-        <span class="label">欧洲语种翻译结果（完美对齐）：</span>
+        <span class="label">欧洲语种翻译结果（无标点、完美对齐）：</span>
         <div class="btn-group">
           <button id="copyLeftBtn" class="copy-btn" onclick="copyText('outputLeft', 'copyLeftBtn')">一键复制</button>
         </div>
@@ -211,7 +211,7 @@
       </div>
 
       <div class="result-header">
-        <span class="label">亚洲主要语言翻译结果（完美对齐）：</span>
+        <span class="label">亚洲主要语言翻译结果（无标点、完美对齐）：</span>
         <div class="btn-group">
           <button id="copyRightBtn" class="copy-btn" onclick="copyText('outputRight', 'copyRightBtn')">一键复制</button>
         </div>
@@ -224,14 +224,29 @@
   </div>
 
   <script>
-    // 纯净按行翻译函数：完整保留用户输入的标点与格式，不作多余删减
+    // 无标点纯净输出清洗函数：彻底抹除所有标点符号，仅保留文字、数字和空格
+    function processLine(translatedText) {
+      if (!translatedText) return "";
+      
+      let cleaned = translatedText
+        // 使用 Unicode 属性转义精准清除所有标点符号（如逗号、句号、问号、叹号、引号等）
+        .replace(/[\p{P}\p{S}]/gu, '')
+        // 将多个连续空格压缩为单个空格
+        .replace(/\s+/g, ' ')
+        // 彻底切断行首任何空白缩进
+        .replace(/^[\s\u3000]+/, '')
+        .trim();
+
+      return cleaned;
+    }
+
+    // 按行拆分、逐行翻译并用 \n 拼接
     function translateText(text, sourceLang, targetLang) {
       return (async () => {
         const lines = text.split('\n');
         const translatedLines = [];
 
         for (let line of lines) {
-          // 如果是空行，直接保留空行以防错位
           if (!line.trim()) {
             translatedLines.push(""); 
             continue;
@@ -247,13 +262,13 @@
               data[0].forEach(item => {
                 if (item[0]) translated += item[0];
               });
-              // 仅去除可能导致对齐偏移的行首零宽/全角不可见空白，保留所有正常标点
-              translatedLines.push(translated.replace(/^[\s\u3000]+/, ''));
+              // 统一过一遍无标点纯净清洗
+              translatedLines.push(processLine(translated));
             } else {
-              translatedLines.push(line);
+              translatedLines.push(processLine(line));
             }
           } catch (e) {
-            translatedLines.push(line);
+            translatedLines.push(processLine(line));
           }
         }
 
