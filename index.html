@@ -232,7 +232,7 @@
   </div>
 
   <script>
-    // 终极哈希隔离引擎：100% 绝对保护所有数字、百分号、斜杠、小数和时间
+    // 宗师级全息强力保护清洗函数：绝对精准保护任意数字、百分号、斜杠、小数、时间与范围
     function translateText(text, sourceLang, targetLang) {
       return (async () => {
         const lines = text.split('\n');
@@ -266,9 +266,9 @@
             continue;
           }
 
-          // 3. 【核心哈希护盾】：把所有的数字、百分号、小数、斜杠、时间范围全部抽离替换为唯一的代号
+          // 3. 【超级全息护盾升级】：将独立数字（如 25）、带百分号数字、小数、斜杠、时间范围全面精准挖空保护！
           const tokens = [];
-          const safeQuery = contentToSend.replace(/(\d+[:：]\d+|\d+(?:\.\d+)?%|\d+\/|\d+(?:\.\d+)?%?\s*[-~至]\s*\d+(?:\.\d+)?%?|\d+(?:\.\d+)?)/g, (match) => {
+          const safeQuery = contentToSend.replace(/(\d+[:：]\d+|\d+(?:\.\d+)?%|\d+\/|\b\d+\b|\d+(?:\.\d+)?%?\s*[-~至]\s*\d+(?:\.\d+)?%?|\d+(?:\.\d+)?)/g, (match) => {
             if (!match.trim()) return match;
             tokens.push(match);
             return `__K${tokens.length - 1}__`;
@@ -285,13 +285,13 @@
                 if (item[0]) translated += item[0];
               });
 
-              // 4. 【哈希精准还原】：无论谷歌把句子怎么打乱，我们强制把原装的数字/百分号按代号塞回原位
+              // 4. 【哈希绝对精准还原】
               tokens.forEach((tokenVal, idx) => {
                 const reg = new RegExp(`__K${idx}__`, 'g');
                 translated = translated.replace(reg, tokenVal);
               });
 
-              // 5. 清理多余标点，但绝对放行我们保护的符号
+              // 5. 清理多余标点，保留必要符号
               let cleanedBody = translated
                 .replace(/[，,。．?!？！;；""''""（）()\[\]{}《》〈〉]/g, ' ') 
                 .replace(/[\p{P}\p{S}]/gu, (match) => {
