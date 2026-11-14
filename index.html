@@ -30,14 +30,14 @@
     option { color: #333; padding: 5px; }
     .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; margin-top: 10px; }
     
-    /* 结果框容器：绝对左对齐，强制纯白字 + 红色立体描边 */
+    /* 结果框容器：绝对左对齐，极白亮文字 + 纤细精致的红色立体描边 */
     .result-box { 
       padding: 12px; 
-      background: #1e1e1e !important; /* 深灰色背景，衬托白字红边 */
+      background: #181a1b !important; /* 深黑灰背景，衬托极致白字 */
       border-radius: 4px; 
       min-height: 90px; 
       font-size: 16px; 
-      color: #ffffff !important; /* 强制纯白色文字 */
+      color: #ffffff !important; /* 绝对纯白色文字 */
       word-break: break-all; 
       white-space: pre-wrap; 
       cursor: default; 
@@ -45,14 +45,14 @@
       font-weight: bold; 
       text-align: left !important;
       direction: ltr !important;
-      /* 红色立体描边效果（四周围绕红阴影） */
+      /* 细红边效果（0.8px 细腻立体阴影） */
       text-shadow: 
-        -1.5px -1.5px 0 #ff0000,  
-         1.5px -1.5px 0 #ff0000,  
-        -1.5px  1.5px 0 #ff0000,  
-         1.5px  1.5px 0 #ff0000 !important;
+        -0.8px -0.8px 0 #ff1744,  
+         0.8px -0.8px 0 #ff1744,  
+        -0.8px  0.8px 0 #ff1744,  
+         0.8px  0.8px 0 #ff1744 !important;
     }
-    .result-box:hover { background: #2d2d2d; }
+    .result-box:hover { background: #222527; }
     
     /* 自定义悬浮提示卡片样式 */
     .custom-tooltip {
@@ -278,7 +278,7 @@
                 });
               }
 
-              // 3. 清除翻译结果中除时间冒号 `:` 之外的所有标点符号（问号、句号、逗号等）
+              // 3. 清除翻译结果中除时间冒号 `:` 之外的所有标点符号（问号, 句号, 逗号等）
               let cleanedBody = translated
                 .replace(/[，,。．?!？！;；""''""（）()\[\]{}《》〈〉-]/g, ' ')
                 .replace(/[\p{P}\p{S}]/gu, (match) => {
