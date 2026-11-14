@@ -30,15 +30,15 @@
     option { color: #333; padding: 5px; }
     .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; margin-top: 10px; }
     
-    /* 结果框容器：绝对左对齐，强制【纯黑底、纯白字、极细精致红边】 */
+    /* 结果框容器：绝对锁死为【纯黑底、纯白字、极细柔和红边】 */
     .result-box { 
       padding: 12px; 
       background: #000000 !important; /* 纯黑底色 */
-      border: 1px solid #333333;
+      border: 1px solid #222222 !important;
       border-radius: 4px; 
       min-height: 90px; 
       font-size: 16px; 
-      color: #ffffff !important; /* 纯白文字 */
+      color: #ffffff !important; /* 强制纯白字 */
       word-break: break-all; 
       white-space: pre-wrap; 
       cursor: default; 
@@ -46,14 +46,14 @@
       font-weight: bold; 
       text-align: left !important;
       direction: ltr !important;
-      /* 极细、柔和的红色微描边（0.6px，绝对不结块、不刺眼） */
+      /* 极细、清晰的红色微描边（不结块、不刺眼） */
       text-shadow: 
         -0.6px -0.6px 0 #ff1744,  
          0.6px -0.6px 0 #ff1744,  
         -0.6px  0.6px 0 #ff1744,  
          0.6px  0.6px 0 #ff1744 !important;
     }
-    .result-box:hover { background: #111111; }
+    .result-box:hover { background: #111111 !important; }
     
     /* 自定义悬浮提示卡片样式 */
     .custom-tooltip {
