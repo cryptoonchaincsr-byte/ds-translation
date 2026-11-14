@@ -232,7 +232,7 @@
   </div>
 
   <script>
-    // 宗师级全息强力保护清洗函数：绝对精准保护任意数字、百分号、斜杠、小数、时间与范围
+    // 终极原子级分离引擎：绝对按原顺序切词，绝不丢数字、绝不错位
     function translateText(text, sourceLang, targetLang) {
       return (async () => {
         const lines = text.split('\n');
@@ -260,63 +260,88 @@
             continue;
           }
 
-          // 2. 检查是否为纯数字/符号行
-          if (/^[\d\.\%\-\~\s\:\：\至\/]+$/.test(contentToSend)) {
-            translatedLines.push(trimmedLine);
-            continue;
-          }
+          // 2. 按空格将整行拆分为独立的“原子块”
+          const rawTokens = contentToSend.split(/\s+/);
+          const translatedTokens = [];
 
-          // 3. 【超级全息护盾升级】：将独立数字（如 25）、带百分号数字、小数、斜杠、时间范围全面精准挖空保护！
-          const tokens = [];
-          const safeQuery = contentToSend.replace(/(\d+[:：]\d+|\d+(?:\.\d+)?%|\d+\/|\b\d+\b|\d+(?:\.\d+)?%?\s*[-~至]\s*\d+(?:\.\d+)?%?|\d+(?:\.\d+)?)/g, (match) => {
-            if (!match.trim()) return match;
-            tokens.push(match);
-            return `__K${tokens.length - 1}__`;
-          });
+          for (let token of rawTokens) {
+            if (!token) continue;
 
-          try {
-            const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(safeQuery)}`;
-            const res = await fetch(url);
-            const data = await res.json();
-            
-            if (data && data[0]) {
-              let translated = "";
-              data[0].forEach(item => {
-                if (item[0]) translated += item[0];
-              });
+            // 如果这个词块是纯数字、百分号、小数、斜杠、范围等（例如 "25"、"25%"、"35%"、"45/"、"12.52%-100%"）
+            // 直接原封不动保留，绝不发给谷歌翻译！
+            if (/^([\d\.\%\-\~\:\/]+)$/.test(token)) {
+              translatedTokens.push(token);
+              continue;
+            }
 
-              // 4. 【哈希绝对精准还原】
-              tokens.forEach((tokenVal, idx) => {
-                const reg = new RegExp(`__K${idx}__`, 'g');
-                translated = translated.replace(reg, tokenVal);
-              });
+            // 如果是“数字/符号 + 汉字/字母”混合（例如 "32%巴西" 或 "35%中国"）
+            // 我们在本地把数字部分和汉字部分剥离开：数字不动，只把汉字送去翻译！
+            let mixMatch = token.match(/^([\d\.\%\-\~\:\/]+)([\u4e00-\u9fa5a-zA-Z]+)([\d\.\%\-\~\:\/]*)$/) ||
+                           token.match(/^([\u4e00-\u9fa5a-zA-Z]+)([\d\.\%\-\~\:\/]+)$/);
 
-              // 5. 清理多余标点，保留必要符号
-              let cleanedBody = translated
-                .replace(/[，,。．?!？！;；""''""（）()\[\]{}《》〈〉]/g, ' ') 
-                .replace(/[\p{P}\p{S}]/gu, (match) => {
-                  if (match === ':' || match === '：' || match === '%' || match === '.' || match === '-' || match === '/') {
-                    return match;
-                  }
-                  return '';
-                });
+            if (mixMatch) {
+              let preNum = "";
+              let wordPart = "";
+              let sufNum = "";
 
-              cleanedBody = cleanedBody.replace(/\s+/g, ' ').trim();
-
-              // 6. 组装行首编号
-              let finalLine = cleanedBody;
-              if (prefixPart) {
-                cleanedBody = cleanedBody.replace(/^\d+[\.,、，\/]?\s*/, '');
-                finalLine = prefixPart + " " + cleanedBody;
+              if (/^[\d\.\%\-\~\:\/]+$/.test(mixMatch[1]) && /^[\u4e00-\u9fa5a-zA-Z]+$/.test(mixMatch[2])) {
+                preNum = mixMatch[1];
+                wordPart = mixMatch[2];
+                sufNum = mixMatch[3] || "";
+              } else if (/^[\u4e00-\u9fa5a-zA-Z]+$/.test(mixMatch[1]) && /^[\d\.\%\-\~\:\/]+$/.test(mixMatch[2])) {
+                wordPart = mixMatch[1];
+                sufNum = mixMatch[2];
+              } else {
+                wordPart = token;
               }
 
-              translatedLines.push(finalLine);
+              try {
+                const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(wordPart)}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                let translatedWord = wordPart;
+                if (data && data[0]) {
+                  translatedWord = "";
+                  data[0].forEach(item => {
+                    if (item[0]) translatedWord += item[0];
+                  });
+                  translatedWord = translatedWord.replace(/[，,。．?!？！;；""''""（）()\[\]{}《》〈〉]/g, '').trim();
+                }
+                translatedTokens.push(preNum + translatedWord + sufNum);
+              } catch (e) {
+                translatedTokens.push(token);
+              }
             } else {
-              translatedLines.push(trimmedLine);
+              // 纯汉字/外文字符块，正常发送翻译
+              try {
+                const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(token)}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                let translatedToken = token;
+                if (data && data[0]) {
+                  translatedToken = "";
+                  data[0].forEach(item => {
+                    if (item[0]) translatedToken += item[0];
+                  });
+                  translatedToken = translatedToken.replace(/[，,。．?!？！;；""''""（）()\[\]{}《》〈〉]/g, '').trim();
+                }
+                translatedTokens.push(translatedToken);
+              } catch (e) {
+                translatedTokens.push(token);
+              }
             }
-          } catch (e) {
-            translatedLines.push(trimmedLine);
           }
+
+          let cleanedBody = translatedTokens.join(' ').trim();
+
+          // 3. 完美拼回行首编号
+          let finalLine = cleanedBody;
+          if (prefixPart) {
+            cleanedBody = cleanedBody.replace(/^\d+[\.,、，\/]?\s*/, '');
+            finalLine = prefixPart + " " + cleanedBody;
+          }
+
+          translatedLines.push(finalLine);
         }
 
         return translatedLines.join('\n');
