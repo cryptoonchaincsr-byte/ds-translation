@@ -30,7 +30,7 @@
     option { color: #333; padding: 5px; }
     .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; margin-top: 10px; }
     
-    /* 结果框容器：字体颜色为绿色 */
+    /* 结果框容器：字体颜色为绿色，支持换行显示 */
     .result-box { padding: 12px; background: #f1f3f5; border-radius: 4px; min-height: 90px; font-size: 16px; color: #28a745; word-break: break-all; white-space: pre-wrap; cursor: default; position: relative; font-weight: bold; }
     .result-box:hover { background: #e9ecef; }
     
@@ -54,6 +54,7 @@
       max-width: 90%;
       pointer-events: none;
       font-weight: bold;
+      white-space: pre-wrap;
     }
     .custom-tooltip::after {
       content: "";
@@ -152,7 +153,7 @@
       </div>
 
       <div class="result-header">
-        <span class="label">欧洲语种翻译结果（完美保留符号）：</span>
+        <span class="label">欧洲语种翻译结果（完美跨行）：</span>
         <div class="btn-group">
           <button id="copyLeftBtn" class="copy-btn" onclick="copyText('outputLeft', 'copyLeftBtn')">一键复制</button>
         </div>
@@ -196,7 +197,7 @@
       </div>
 
       <div class="result-header">
-        <span class="label">亚洲主要语言翻译结果（完美保留符号）：</span>
+        <span class="label">亚洲主要语言翻译结果（完美跨行）：</span>
         <div class="btn-group">
           <button id="copyRightBtn" class="copy-btn" onclick="copyText('outputRight', 'copyRightBtn')">一键复制</button>
         </div>
@@ -209,33 +210,31 @@
   </div>
 
   <script>
-    // 智能修复与标点恢复函数
-    function processText(translatedText, originalText) {
+    // 对单行文本进行清理与特殊符号保护
+    function processLine(translatedText, originalLine) {
       let cleaned = translatedText
         .replace(/[\p{P}\p{S}]/gu, '')
         .replace(/\s+/g, ' ')
         .trim();
 
-      // 1. 恢复时间中的冒号（例如 18:25）
-      const timeMatches = originalText.match(/\d+[:：]\d+/g);
+      // 1. 恢复该行中的时间冒号（如 18:25）
+      const timeMatches = originalLine.match(/\d+[:：]\d+/g);
       if (timeMatches) {
         timeMatches.forEach(timeStr => {
           const parts = timeStr.split(/[:：]/);
           if (parts.length === 2) {
-            // 在译文中寻找被分开的数字，并用冒号重新连接
             const regex = new RegExp(`\\b${parts[0]}\\s*${parts[1]}\\b`, 'g');
             cleaned = cleaned.replace(regex, `${parts[0]}:${parts[1]}`);
           }
         });
       }
 
-      // 2. 恢复数字后的顿号或点（例如 1、 2.）
-      const numPuncMatches = originalText.match(/\d+[\.,、，]/g);
+      // 2. 恢复该行中数字后的顿号或点（如 1、 2.）
+      const numPuncMatches = originalLine.match(/\d+[\.,、，]/g);
       if (numPuncMatches) {
         numPuncMatches.forEach(np => {
           const num = np.match(/\d+/)[0];
           const punc = np.match(/[\.,、，]/)[0];
-          // 将译文中紧跟数字的空格替换为带顿号/点的格式
           const regex = new RegExp(`\\b${num}\\s+`, 'g');
           cleaned = cleaned.replace(regex, `${num}${punc} `);
         });
@@ -244,77 +243,80 @@
       return cleaned;
     }
 
+    // 按行拆分、逐行翻译并拼接，以实现完美的跨行效果
+    async function translateText(text, sourceLang, targetLang) {
+      const lines = text.split('\n');
+      const translatedLines = [];
+
+      for (let line of lines) {
+        const trimmedLine = line.trim();
+        if (!trimmedLine) {
+          translatedLines.push(""); // 保持空行
+          continue;
+        }
+
+        try {
+          const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(trimmedLine)}`;
+          const res = await fetch(url);
+          const data = await res.json();
+          
+          if (data && data[0]) {
+            let translated = "";
+            data[0].forEach(item => {
+              if (item[0]) translated += item[0];
+            });
+            const processed = processLine(translated, trimmedLine);
+            translatedLines.push(processed);
+          } else {
+            translatedLines.push(trimmedLine);
+          }
+        } catch (e) {
+          translatedLines.push(trimmedLine);
+        }
+      }
+
+      return translatedLines.join('\n');
+    }
+
     let timerLeft = null;
     let timerRight = null;
 
     async function translateLeftToRight() {
-      const text = document.getElementById('inputLeft').value.trim();
+      const text = document.getElementById('inputLeft').value;
       const sourceLang = document.getElementById('sourceLangLeft').value;
       const targetLang = document.getElementById('targetLangLeft').value;
       const output = document.getElementById('outputLeft');
       const tooltip = document.getElementById('tooltipLeft');
 
-      if (!text) {
+      if (!text.trim()) {
         output.firstChild.nodeValue = "等待输入...";
         tooltip.innerText = "暂无原文";
         return;
       }
       output.firstChild.nodeValue = "实时翻译中...";
 
-      try {
-        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
-        const res = await fetch(url);
-        const data = await res.json();
-        
-        if (data && data[0]) {
-          let translated = "";
-          data[0].forEach(item => {
-            if (item[0]) translated += item[0];
-          });
-          const finalResult = processText(translated, text);
-          output.firstChild.nodeValue = finalResult;
-          tooltip.innerText = "原文本：\n" + text;
-        } else {
-          output.firstChild.nodeValue = "翻译失败，请重试";
-        }
-      } catch (e) {
-        output.firstChild.nodeValue = "网络连接异常，请检查网络";
-      }
+      const finalResult = await translateText(text, sourceLang, targetLang);
+      output.firstChild.nodeValue = finalResult;
+      tooltip.innerText = "原文本：\n" + text;
     }
 
     async function translateRightToLeft() {
-      const text = document.getElementById('inputRight').value.trim();
+      const text = document.getElementById('inputRight').value;
       const sourceLang = document.getElementById('sourceLangRight').value;
       const targetLang = document.getElementById('targetLangRight').value;
       const output = document.getElementById('outputRight');
       const tooltip = document.getElementById('tooltipRight');
 
-      if (!text) {
+      if (!text.trim()) {
         output.firstChild.nodeValue = "等待输入...";
         tooltip.innerText = "暂无原文";
         return;
       }
       output.firstChild.nodeValue = "实时翻译中...";
 
-      try {
-        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
-        const res = await fetch(url);
-        const data = await res.json();
-        
-        if (data && data[0]) {
-          let translated = "";
-          data[0].forEach(item => {
-            if (item[0]) translated += item[0];
-          });
-          const finalResult = processText(translated, text);
-          output.firstChild.nodeValue = finalResult;
-          tooltip.innerText = "原文本：\n" + text;
-        } else {
-          output.firstChild.nodeValue = "翻译失败，请重试";
-        }
-      } catch (e) {
-        output.firstChild.nodeValue = "网络连接异常，请检查网络";
-      }
+      const finalResult = await translateText(text, sourceLang, targetLang);
+      output.firstChild.nodeValue = finalResult;
+      tooltip.innerText = "原文本：\n" + text;
     }
 
     function clearContent(inputId, outputId) {
