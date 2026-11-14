@@ -30,7 +30,7 @@
     option { color: #333; padding: 5px; }
     .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; margin-top: 10px; }
     
-    /* 核心修复：彻底抛弃内联 span 嵌套，直接用 div 做绝对左对齐、无缩进的块级排版 */
+    /* 结果框容器：强制绝对左对齐，彻底封死任何缩进可能 */
     .result-box { 
       padding: 12px; 
       background: #f1f3f5; 
@@ -44,8 +44,7 @@
       position: relative; 
       font-weight: bold; 
       text-align: left !important;
-      margin: 0 !important;
-      text-indent: 0 !important;
+      direction: ltr !important;
     }
     .result-box:hover { background: #e9ecef; }
     
@@ -168,12 +167,11 @@
       </div>
 
       <div class="result-header">
-        <span class="label">欧洲语种翻译结果（完美对齐）：</span>
+        <span class="label">欧洲语种翻译结果（绝对整齐对齐）：</span>
         <div class="btn-group">
           <button id="copyLeftBtn" class="copy-btn" onclick="copyText('outputLeft', 'copyLeftBtn')">一键复制</button>
         </div>
       </div>
-      <!-- 直接将文本写入 result-box，彻底消除嵌套导致的任何排版偏移 -->
       <div id="outputLeft" class="result-box">
         等待输入...
         <span id="tooltipLeft" class="custom-tooltip">暂无原文</span>
@@ -213,12 +211,11 @@
       </div>
 
       <div class="result-header">
-        <span class="label">亚洲主要语言翻译结果（完美对齐）：</span>
+        <span class="label">亚洲主要语言翻译结果（绝对整齐对齐）：</span>
         <div class="btn-group">
           <button id="copyRightBtn" class="copy-btn" onclick="copyText('outputRight', 'copyRightBtn')">一键复制</button>
         </div>
       </div>
-      <!-- 直接将文本写入 result-box，彻底消除嵌套导致的任何排版偏移 -->
       <div id="outputRight" class="result-box">
         等待输入...
         <span id="tooltipRight" class="custom-tooltip">暂无原文</span>
@@ -227,7 +224,7 @@
   </div>
 
   <script>
-    // 基础符号清理与修复
+    // 终极清洗函数：绝对强制切断任何行首隐藏空格与缩进
     function processLine(translatedText, originalLine) {
       let cleaned = translatedText
         .replace(/[\p{P}\p{S}]/gu, '')
@@ -258,7 +255,8 @@
         }
       }
 
-      return cleaned.trim();
+      // 3. 核心大招：利用正则表达式直接抹杀一切行首空白字符（包括全角/半角/零宽空格）
+      return cleaned.replace(/^[\s\u3000]+/, '');
     }
 
     // 按行拆分、逐行翻译并用 \n 拼接
@@ -267,7 +265,8 @@
       const translatedLines = [];
 
       for (let line of lines) {
-        const trimmedLine = line.trim();
+        // 关键：对输入的每一行也做最彻底的 strip 净化
+        const trimmedLine = line.replace(/^[\s\u3000]+/, '').trim();
         if (!trimmedLine) {
           translatedLines.push(""); 
           continue;
@@ -304,19 +303,16 @@
       const sourceLang = document.getElementById('sourceLangLeft').value;
       const targetLang = document.getElementById('targetLangLeft').value;
       const outputDiv = document.getElementById('outputLeft');
-      const tooltip = document.getElementById('tooltipLeft');
 
       if (!text.trim()) {
         outputDiv.innerHTML = '等待输入...<span id="tooltipLeft" class="custom-tooltip">暂无原文</span>';
         return;
       }
       
-      // 先显示加载中，同时保留 tooltip 结构
       outputDiv.innerHTML = '实时翻译中...<span id="tooltipLeft" class="custom-tooltip">暂无原文</span>';
 
       const finalResult = await translateText(text, sourceLang, targetLang);
       
-      // 直接把纯文本安全写进输出框，并完美带上悬停提示
       outputDiv.textContent = finalResult;
       const newTooltip = document.createElement('span');
       newTooltip.id = 'tooltipLeft';
@@ -330,7 +326,6 @@
       const sourceLang = document.getElementById('sourceLangRight').value;
       const targetLang = document.getElementById('targetLangRight').value;
       const outputDiv = document.getElementById('outputRight');
-      const tooltip = document.getElementById('tooltipRight');
 
       if (!text.trim()) {
         outputDiv.innerHTML = '等待输入...<span id="tooltipRight" class="custom-tooltip">暂无原文</span>';
@@ -357,7 +352,6 @@
 
     function copyText(outputId, btnId) {
       const outputDiv = document.getElementById(outputId);
-      // 获取文本内容（排除 tooltip 的文本）
       const clone = outputDiv.cloneNode(true);
       const tip = clone.querySelector('.custom-tooltip');
       if (tip) tip.remove();
