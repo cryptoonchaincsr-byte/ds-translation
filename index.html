@@ -193,7 +193,7 @@
         <button class="clear-btn" onclick="clearContent('inputRight', 'outputRight', 'tooltipRight')">✕ 清空</button>
       </div>
       <textarea id="inputRight" placeholder="在此输入任意外文或欧洲语言..."></textarea>
-      <div class="tip">⚡ 已开启实时翻译（提示：悬停结果可看原原文）</div>
+      <div class="tip">⚡ 已开启实时翻译（提示：悬停结果可看原文本）</div>
       
       <div style="margin-top: 10px;">
         <span class="label">源语言：</span>
@@ -232,7 +232,7 @@
   </div>
 
   <script>
-    // 宗师级防丢数字、防丢小数点的智能隔离清洗函数
+    // 宗师级防丢数字、防丢小数点的智能隔离清洗函数（加强版）
     function translateText(text, sourceLang, targetLang) {
       return (async () => {
         const lines = text.split('\n');
@@ -260,17 +260,16 @@
             continue;
           }
 
-          // 2. 【核心隔离保护】：把正文中的数字范围、小数、百分号、时间（如 12.52%-100% 或 18:25）先挖出来打上安全标记！
-          // 匹配：时间、带小数点的数字范围、百分号等
+          // 2. 【核心无敌隔离保护】：把正文中的带小数点的数字、百分号范围、时间完美挖出来！
           const placeholders = [];
-          let protectedContent = contentToSend.replace(/(\d+[:：]\d+|\d+(?:\.\d+)?%?\s*[-~至]\s*\d+(?:\.\d+)?%?|\d+\.\d+%?|\d+%)?/g, (match) => {
+          // 匹配：时间(18:25)、小数范围(12.52%-100%)、普通小数带百分号(12.53%)、整数百分号(100%)等
+          const protectedContent = contentToSend.replace(/(\d+[:：]\d+|\d+\.\d+%?\s*[-~至]\s*\d+(?:\.\d+)?%?|\d+\.\d+%?|\d+%)?/g, (match) => {
             if (!match.trim()) return match;
             placeholders.push(match);
             return `__PLACEHOLDER_${placeholders.length - 1}__`;
           });
 
           try {
-            // 此时送去翻译的只有纯文字部分（例如把数字挖空后只翻译 "利润" 两个字），绝对不会被谷歌当成公式破坏！
             const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(protectedContent)}`;
             const res = await fetch(url);
             const data = await res.json();
@@ -281,14 +280,14 @@
                 if (item[0]) translated += item[0];
               });
 
-              // 3. 【无损拼回】：把刚才挖出来的原装数字、百分号、小数点、区间完美无损地塞回翻译好的文字里！
+              // 3. 【完美无损拼回】：把保护好的完整数字原封不动塞回原位
               placeholders.forEach((val, idx) => {
                 translated = translated.replace(`__PLACEHOLDER_${idx}__`, val);
               });
 
-              // 4. 清理翻译文本中多余的标点符号（但放行保护好的数字、百分号、小数点、连接符、冒号）
+              // 4. 仅清理多余中文标点，严禁破坏数字、百分号、小数点、连接符、冒号
               let cleanedBody = translated
-                .replace(/[，,。．?!？！;；""''""（）()\[\]{}《》〈〉]/g, ' ') 
+                .replace(/[，,。?!？！;；""''""（）()\[\]{}《》〈〉]/g, ' ') 
                 .replace(/[\p{P}\p{S}]/gu, (match) => {
                   if (match === ':' || match === '：' || match === '%' || match === '.' || match === '-') {
                     return match;
