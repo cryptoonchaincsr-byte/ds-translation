@@ -30,7 +30,7 @@
     option { color: #333; padding: 5px; }
     .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; margin-top: 10px; }
     
-    /* 结果框容器：完美跨行与绿色字体、绝对禁止任何缩进 */
+    /* 结果框容器：完美跨行与绿色字体、绝对左对齐 */
     .result-box { padding: 12px; background: #f1f3f5; border-radius: 4px; min-height: 90px; font-size: 16px; color: #28a745; word-break: break-all; white-space: pre-wrap; cursor: default; position: relative; font-weight: bold; text-align: left; }
     .result-box:hover { background: #e9ecef; }
     
@@ -210,7 +210,7 @@
   </div>
 
   <script>
-    // 绝对精准、绝不缩进的单行清理与符号恢复函数
+    // 终极单行修复函数：强制左侧顶格，绝不产生任何空白缩进
     function processLine(translatedText, originalLine) {
       let cleaned = translatedText
         .replace(/[\p{P}\p{S}]/gu, '')
@@ -229,20 +229,18 @@
         });
       }
 
-      // 2. 只有当原行以“数字+顿号/点”开头时（例如 1、 2.），才在最前方精准补回，绝不给普通文本加缩进
+      // 2. 如果原行以数字+顿号/点开头，则精准把编号拼在最前
       const trimmedOrig = originalLine.trim();
       const prefixMatch = trimmedOrig.match(/^(\d+)([\.,、，])/);
       if (prefixMatch) {
         const num = prefixMatch[1];
         const punc = prefixMatch[2];
-        
-        // 移除译文中可能自带的残留编号
         cleaned = cleaned.replace(new RegExp(`^\\s*(${num})?\\s*`, 'g'), '');
-        // 强制完美拼接
         cleaned = `${num}${punc} ${cleaned}`;
       }
 
-      return cleaned.trim();
+      // 核心：强制清除行首可能存在的任何空格，保证绝对顶格！
+      return cleaned.replace(/^\s+/, '');
     }
 
     // 按行拆分、逐行翻译并用 \n 拼接
