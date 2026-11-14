@@ -152,7 +152,7 @@
             <option value="sk">斯洛伐克语 (Slovak)</option>
             <option value="sl">斯洛文尼亚语 (Slovenian)</option>
             <option value="et">爱沙尼亚语 (Estonian)</option>
-            <option value="lv">Latvian</option>
+            <option value="lv">拉脱维亚语 (Latvian)</option>
             <option value="lt">立陶宛语 (Lithuanian)</option>
             <option value="sr">塞尔维亚语 (Serbian)</option>
             <option value="sq">阿尔巴尼亚语 (Albanian)</option>
@@ -167,7 +167,7 @@
       </div>
 
       <div class="result-header">
-        <span class="label">欧洲语种翻译结果（保留时间冒号与数字点、完美对齐）：</span>
+        <span class="label">欧洲语种翻译结果（完美对齐）：</span>
         <div class="btn-group">
           <button id="copyLeftBtn" class="copy-btn" onclick="copyText('outputLeft', 'copyLeftBtn')">一键复制</button>
         </div>
@@ -211,7 +211,7 @@
       </div>
 
       <div class="result-header">
-        <span class="label">亚洲主要语言翻译结果（保留时间冒号与数字点、完美对齐）：</span>
+        <span class="label">亚洲主要语言翻译结果（完美对齐）：</span>
         <div class="btn-group">
           <button id="copyRightBtn" class="copy-btn" onclick="copyText('outputRight', 'copyRightBtn')">一键复制</button>
         </div>
@@ -224,7 +224,7 @@
   </div>
 
   <script>
-    // 终极高保真清洗函数：保护时间冒号和行首编号点，其余所有标点统统抹除
+    // 终极保护函数：完美保留时间冒号(:)以及行首带点/顿号的编号（如 1. 2. 1、 2、）
     function translateText(text, sourceLang, targetLang) {
       return (async () => {
         const lines = text.split('\n');
@@ -241,10 +241,10 @@
           let prefixHolder = null;
           let timeHolders = [];
 
-          // 1. 保护行首编号（如 1. 或 2. 或 1、）
+          // 1. 完美捕获并保护行首编号（无论是点 `.` 还是中文顿号 `、` 或者是东南亚缅文顿号）
           const prefixMatch = trimmedLine.match(/^(\d+)([\.,、，\u104A\u104B]?)\s*(.*)/);
           if (prefixMatch && prefixMatch[2]) {
-            prefixHolder = prefixMatch[1] + prefixMatch[2]; // 例如 "1."
+            prefixHolder = prefixMatch[1] + prefixMatch[2]; // 例如 "1、" 或 "1."
             lineToSend = `___PREFIX___ ${prefixMatch[3]}`;
           }
 
@@ -269,8 +269,7 @@
                 if (item[0]) translated += item[0];
               });
 
-              // 3. 抹除翻译结果中除保护占位符之外的所有其他标点符号（问号、句号、逗号、叹号等）
-              // 先把占位符暂时替换成不会被正则误伤的安全字符串
+              // 3. 将占位符安全隔离，随后抹除所有其他多余的标点符号（问号、句号、逗号等）
               translated = translated.replace(/___PREFIX___/g, '___P_SAFE___');
               timeHolders.forEach((th, idx) => {
                 translated = translated.replace(new RegExp(th.placeholder, 'g'), `___T_SAFE_${idx}___`);
@@ -281,13 +280,13 @@
                 .replace(/[，,。．?!？！;；""''""（）()\[\]{}《》〈〉-]/g, ' ')
                 .replace(/[\p{P}\p{S}]/gu, '');
 
-              // 4. 精准还原保护标记
+              // 4. 精准还原保护标记（编号带顿号/点，时间带冒号）
               translated = translated.replace(/___P_SAFE___/g, prefixHolder ? prefixHolder : '');
               timeHolders.forEach((th, idx) => {
                 translated = translated.replace(new RegExp(`___T_SAFE_${idx}___`, 'g'), th.original);
               });
 
-              // 5. 最终清理多余空格与左侧缩进
+              // 5. 最终完美对齐与去空格
               let finalCleaned = translated.replace(/\s+/g, ' ').trim().replace(/^[\s\u3000]+/, '');
               translatedLines.push(finalCleaned);
             } else {
