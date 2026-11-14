@@ -30,7 +30,7 @@
     option { color: #333; padding: 5px; }
     .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; margin-top: 10px; }
     
-    /* 结果框容器：完美跨行与绿色字体、强制左对齐 */
+    /* 结果框容器：完美跨行与绿色字体、绝对左对齐 */
     .result-box { padding: 12px; background: #f1f3f5; border-radius: 4px; min-height: 90px; font-size: 16px; color: #28a745; word-break: break-all; white-space: pre-wrap; cursor: default; position: relative; font-weight: bold; text-align: left; }
     .result-box:hover { background: #e9ecef; }
     
@@ -153,7 +153,7 @@
       </div>
 
       <div class="result-header">
-        <span class="label">欧洲语种翻译结果（完美对齐）：</span>
+        <span class="label">欧洲语种翻译结果（绝对整齐对齐）：</span>
         <div class="btn-group">
           <button id="copyLeftBtn" class="copy-btn" onclick="copyText('textLeft', 'copyLeftBtn')">一键复制</button>
         </div>
@@ -197,7 +197,7 @@
       </div>
 
       <div class="result-header">
-        <span class="label">亚洲主要语言翻译结果（完美对齐）：</span>
+        <span class="label">亚洲主要语言翻译结果（绝对整齐对齐）：</span>
         <div class="btn-group">
           <button id="copyRightBtn" class="copy-btn" onclick="copyText('textRight', 'copyRightBtn')">一键复制</button>
         </div>
@@ -210,15 +210,14 @@
   </div>
 
   <script>
-    // 强力对齐与符号修复函数：强制清除每一行开头的所有缩进和多余空格
+    // 终极单行修复：绝对安全，绝不给非编号行加任何多余前缀，保证完美顶格
     function processLine(translatedText, originalLine) {
-      // 1. 先对译文进行基础清理
       let cleaned = translatedText
         .replace(/[\p{P}\p{S}]/gu, '')
         .replace(/\s+/g, ' ')
         .trim();
 
-      // 2. 恢复时间冒号（如 18:25）
+      // 1. 恢复该行中的时间冒号（如 18:25）
       const timeMatches = originalLine.match(/\d+[:：]\d+/g);
       if (timeMatches) {
         timeMatches.forEach(timeStr => {
@@ -230,18 +229,21 @@
         });
       }
 
-      // 3. 如果原行以“数字+顿号/点”开头（例如 1、 2.），则精准把编号拼在最前
+      // 2. 只有当【该行原句】明确是以“数字+顿号/点”开头时，才把该行的编号补回
       const trimmedOrig = originalLine.trim();
       const prefixMatch = trimmedOrig.match(/^(\d+)([\.,、，])/);
       if (prefixMatch) {
         const num = prefixMatch[1];
         const punc = prefixMatch[2];
-        cleaned = cleaned.replace(new RegExp(`^\\s*(${num})?\\s*`, 'g'), '');
-        cleaned = `${num}${punc} ${cleaned}`;
+        
+        // 如果译文里没有这个数字编号，才在最前面补上；如果已经有了就直接用现成的
+        if (!cleaned.startsWith(num)) {
+          cleaned = cleaned.replace(new RegExp(`^\\s*(${num})?\\s*`, 'g'), '');
+          cleaned = `${num}${punc} ${cleaned}`;
+        }
       }
 
-      // 4. 【核心大招】：强制剥离整行开头可能存在的任何隐形空格或缩进，保证所有行完美绝对顶格对齐！
-      return cleaned.replace(/^\s+/, '');
+      return cleaned.trim();
     }
 
     // 按行拆分、逐行翻译并用 \n 拼接
