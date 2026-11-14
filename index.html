@@ -210,7 +210,7 @@
   </div>
 
   <script>
-    // 完美的单行符号修复函数（杜绝缩进和多余空格）
+    // 零缩进、完美对齐的单行修复函数
     function processLine(translatedText, originalLine) {
       let cleaned = translatedText
         .replace(/[\p{P}\p{S}]/gu, '')
@@ -229,16 +229,18 @@
         });
       }
 
-      // 2. 严格检查原句开头是否有“数字+顿号/点”（如 1、 2.）
-      const prefixMatch = originalLine.match(/^(\d+)([\.,、，])/);
-      if (prefixMatch) {
-        const num = prefixMatch[1];
-        const punc = prefixMatch[2];
-        
-        // 去掉译文中可能自带的乱七八糟前缀，让它重新从最左侧紧贴顶格开始
-        cleaned = cleaned.replace(new RegExp(`^\\s*(${num})?\\s*`), '');
-        // 强制在行首完美拼接：数字 + 标点 + 一个空格 + 内容
-        cleaned = `${num}${punc} ${cleaned}`;
+      // 2. 严格判断：只有当【原句确实以数字+顿号/点开头】时，才做精准的对齐修复
+      if (/^\d+[\.,、，]/.test(originalLine.trim())) {
+        const prefixMatch = originalLine.match(/^(\d+)([\.,、，])/);
+        if (prefixMatch) {
+          const num = prefixMatch[1];
+          const punc = prefixMatch[2];
+          
+          // 清除可能重复的开头数字
+          cleaned = cleaned.replace(new RegExp(`^\\s*(${num})?\\s*`), '');
+          // 强制顶格拼接：绝不产生多余缩进
+          cleaned = `${num}${punc} ${cleaned}`;
+        }
       }
 
       return cleaned.trim();
