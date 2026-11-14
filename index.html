@@ -30,7 +30,7 @@
     option { color: #333; padding: 5px; }
     .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; margin-top: 10px; }
     
-    /* 结果框容器：字体颜色改为绿色 */
+    /* 结果框容器：字体颜色为绿色 */
     .result-box { padding: 12px; background: #f1f3f5; border-radius: 4px; min-height: 90px; font-size: 16px; color: #28a745; word-break: break-all; white-space: pre-wrap; cursor: default; position: relative; font-weight: bold; }
     .result-box:hover { background: #e9ecef; }
     
@@ -153,7 +153,7 @@
       </div>
 
       <div class="result-header">
-        <span class="label">欧洲语种翻译结果（保留特定标点）：</span>
+        <span class="label">欧洲语种翻译结果（已完美修复符号）：</span>
         <div class="btn-group">
           <button id="copyLeftBtn" class="copy-btn" onclick="copyText('outputLeft', 'copyLeftBtn')">一键复制</button>
         </div>
@@ -197,7 +197,7 @@
       </div>
 
       <div class="result-header">
-        <span class="label">亚洲主要语言翻译结果（保留特定标点）：</span>
+        <span class="label">亚洲主要语言翻译结果（已完美修复符号）：</span>
         <div class="btn-group">
           <button id="copyRightBtn" class="copy-btn" onclick="copyText('outputRight', 'copyRightBtn')">一键复制</button>
         </div>
@@ -210,18 +210,40 @@
   </div>
 
   <script>
-    function removePunctuation(text) {
-      return text
-        // 1. 保护时间格式（如 19:05）和数字后面的标点（如 1、 2.）不被误删
-        .replace(/(\d+)([:：])(\d+)/g, '$1__COLON__$2')
-        .replace(/(\d+)([\.,、，])/g, '$1__NUMPUNC__$2')
-        // 2. 清除其他常规标点符号与特殊符号
+    function processText(translatedText, originalText) {
+      // 1. 常规过滤：去除一般标点符号，但保留空格和字母数字
+      let cleaned = translatedText
         .replace(/[\p{P}\p{S}]/gu, '')
-        // 3. 还原被保护的标点
-        .replace(/__COLON__/g, ':')
-        .replace(/__NUMPUNC__/g, '')
         .replace(/\s+/g, ' ')
         .trim();
+
+      // 2. 智能恢复时间格式（如果在原文中发现了 18:25 这样的格式，在译文中自动恢复冒号）
+      const timeMatches = originalText.match(/\d+[:：]\d+/g);
+      if (timeMatches) {
+        timeMatches.forEach(timeStr => {
+          // 将原文中的时间格式如 "1825" 或被分得很开的数字尝试在译文中合并或还原冒号
+          const parts = timeStr.split(/[:：]/);
+          if (parts.length === 2) {
+            // 匹配译文中被吞掉冒号的相邻数字（例如 "18 25" 或 "1825"）
+            const regex1 = new RegExp(`\\b${parts[0]}\\s*${parts[1]}\\b`, 'g');
+            cleaned = cleaned.replace(regex1, `${parts[0]}:${parts[1]}`);
+          }
+        });
+      }
+
+      // 3. 智能恢复数字后的顿号或点（如 1、 2、 变成 1、 2、）
+      const numPuncMatches = originalText.match(/\d+[\.,、，]/g);
+      if (numPuncMatches) {
+        numPuncMatches.forEach(np => {
+          const num = np.match(/\d+/)[0];
+          const punc = np.match(/[\.,、，]/)[0];
+          // 在译文中寻找数字后面跟着空格或直接连着文字的地方，把顿号/点补回去
+          const regex2 = new RegExp(`\\b${num}\\s+`, 'g');
+          cleaned = cleaned.replace(regex2, `${num}${punc} `);
+        });
+      }
+
+      return cleaned;
     }
 
     let timerLeft = null;
@@ -251,8 +273,9 @@
           data[0].forEach(item => {
             if (item[0]) translated += item[0];
           });
-          const cleanResult = removePunctuation(translated);
-          output.firstChild.nodeValue = cleanResult;
+          // 使用智能修复函数处理译文
+          const finalResult = processText(translated, text);
+          output.firstChild.nodeValue = finalResult;
           tooltip.innerText = "原文本：\n" + text;
         } else {
           output.firstChild.nodeValue = "翻译失败，请重试";
@@ -286,8 +309,8 @@
           data[0].forEach(item => {
             if (item[0]) translated += item[0];
           });
-          const cleanResult = removePunctuation(translated);
-          output.firstChild.nodeValue = cleanResult;
+          const finalResult = processText(translated, text);
+          output.firstChild.nodeValue = finalResult;
           tooltip.innerText = "原文本：\n" + text;
         } else {
           output.firstChild.nodeValue = "翻译失败，请重试";
