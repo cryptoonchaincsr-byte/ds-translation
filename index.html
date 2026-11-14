@@ -167,7 +167,7 @@
       </div>
 
       <div class="result-header">
-        <span class="label">欧洲语种翻译结果（无标点、完美对齐）：</span>
+        <span class="label">欧洲语种翻译结果（无任何标点、完美对齐）：</span>
         <div class="btn-group">
           <button id="copyLeftBtn" class="copy-btn" onclick="copyText('outputLeft', 'copyLeftBtn')">一键复制</button>
         </div>
@@ -211,7 +211,7 @@
       </div>
 
       <div class="result-header">
-        <span class="label">亚洲主要语言翻译结果（无标点、完美对齐）：</span>
+        <span class="label">亚洲主要语言翻译结果（无任何标点、完美对齐）：</span>
         <div class="btn-group">
           <button id="copyRightBtn" class="copy-btn" onclick="copyText('outputRight', 'copyRightBtn')">一键复制</button>
         </div>
@@ -224,20 +224,36 @@
   </div>
 
   <script>
-    // 无标点纯净输出清洗函数：彻底抹除所有标点符号，仅保留文字、数字和空格
-    function processLine(translatedText) {
+    // 终极无标点清洗函数：精准过滤所有标点、问号、句号、叹号，但完美保留时间里的冒号（如 18:25）
+    function processLine(translatedText, originalLine) {
       if (!translatedText) return "";
-      
-      let cleaned = translatedText
-        // 使用 Unicode 属性转义精准清除所有标点符号（如逗号、句号、问号、叹号、引号等）
-        .replace(/[\p{P}\p{S}]/gu, '')
-        // 将多个连续空格压缩为单个空格
-        .replace(/\s+/g, ' ')
-        // 彻底切断行首任何空白缩进
-        .replace(/^[\s\u3000]+/, '')
-        .trim();
 
-      return cleaned;
+      // 1. 先把原文本中的时间冒号（如 18:25）临时保护起来
+      let timeReplaced = translatedText;
+      const timeMatches = originalLine.match(/\d+[:：]\d+/g);
+      
+      // 2. 强力清除所有标点符号（包括问号 ?、句号 .、逗号 ,、感叹号 ! 等，同时保留字母、数字、汉字、空格和时间冒号）
+      let cleaned = translatedText
+        // 将常见的标点直接替换为空格或空字符串（除了冒号）
+        .replace(/[，,。．?!？！;；:：""''""（）()\[\]{}《》〈〉、-]/g, ' ')
+        // 兜底：使用通用标点属性清除其他隐藏标点，但排除时间冒号
+        .replace(/[\p{P}\p{S}]/gu, (match) => {
+          return match === ':' || match === '：' ? match : '';
+        });
+
+      // 3. 如果原行有时间，确保时间格式稳固
+      if (timeMatches) {
+        timeMatches.forEach(timeStr => {
+          const parts = timeStr.split(/[:：]/);
+          if (parts.length === 2) {
+            const regex = new RegExp(`\\b${parts[0]}\\s*${parts[1]}\\b`, 'g');
+            cleaned = cleaned.replace(regex, `${parts[0]}:${parts[1]}`);
+          }
+        });
+      }
+
+      // 4. 压缩多余空格，并切断行首缩进
+      return cleaned.replace(/\s+/g, ' ').trim().replace(/^[\s\u3000]+/, '');
     }
 
     // 按行拆分、逐行翻译并用 \n 拼接
@@ -262,13 +278,12 @@
               data[0].forEach(item => {
                 if (item[0]) translated += item[0];
               });
-              // 统一过一遍无标点纯净清洗
-              translatedLines.push(processLine(translated));
+              translatedLines.push(processLine(translated, line));
             } else {
-              translatedLines.push(processLine(line));
+              translatedLines.push(processLine(line, line));
             }
           } catch (e) {
-            translatedLines.push(processLine(line));
+            translatedLines.push(processLine(line, line));
           }
         }
 
