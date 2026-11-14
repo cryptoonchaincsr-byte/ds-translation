@@ -30,15 +30,15 @@
     option { color: #333; padding: 5px; }
     .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; margin-top: 10px; }
     
-    /* 结果框容器 */
-    .result-box { padding: 12px; background: #f1f3f5; border-radius: 4px; min-height: 90px; font-size: 16px; color: #333; word-break: break-all; white-space: pre-wrap; cursor: default; position: relative; }
+    /* 结果框容器：字体颜色改为绿色 */
+    .result-box { padding: 12px; background: #f1f3f5; border-radius: 4px; min-height: 90px; font-size: 16px; color: #28a745; word-break: break-all; white-space: pre-wrap; cursor: default; position: relative; font-weight: bold; }
     .result-box:hover { background: #e9ecef; }
     
-    /* 自定义绿色字体的悬浮提示卡片 */
+    /* 自定义悬浮提示卡片样式 */
     .custom-tooltip {
       visibility: hidden;
       background-color: #212529;
-      color: #28a745; /* 设置字体为绿色 */
+      color: #28a745;
       text-align: left;
       border-radius: 6px;
       padding: 8px 12px;
@@ -97,7 +97,7 @@
         <button class="clear-btn" onclick="clearContent('inputLeft', 'outputLeft')">✕ 清空</button>
       </div>
       <textarea id="inputLeft" placeholder="在此输入中文、缅甸语、老挝语或泰语..."></textarea>
-      <div class="tip">⚡ 已开启实时翻译（提示：鼠标悬停结果即可查看原文本）</div>
+      <div class="tip">⚡ 已开启实时翻译（提示：悬停结果可看原文本）</div>
       
       <div style="margin-top: 10px;">
         <span class="label">源语言：</span>
@@ -153,12 +153,11 @@
       </div>
 
       <div class="result-header">
-        <span class="label">欧洲语种翻译结果（无标点）：</span>
+        <span class="label">欧洲语种翻译结果（保留特定标点）：</span>
         <div class="btn-group">
           <button id="copyLeftBtn" class="copy-btn" onclick="copyText('outputLeft', 'copyLeftBtn')">一键复制</button>
         </div>
       </div>
-      <!-- 结果框（去掉了点击事件，改为纯悬停） -->
       <div id="outputLeft" class="result-box">
         等待输入...
         <span id="tooltipLeft" class="custom-tooltip">暂无原文</span>
@@ -172,7 +171,7 @@
         <button class="clear-btn" onclick="clearContent('inputRight', 'outputRight')">✕ 清空</button>
       </div>
       <textarea id="inputRight" placeholder="在此输入任意外文或欧洲语言..."></textarea>
-      <div class="tip">⚡ 已开启实时翻译（提示：鼠标悬停结果即可查看原文本）</div>
+      <div class="tip">⚡ 已开启实时翻译（提示：悬停结果可看原文本）</div>
       
       <div style="margin-top: 10px;">
         <span class="label">源语言：</span>
@@ -198,12 +197,11 @@
       </div>
 
       <div class="result-header">
-        <span class="label">亚洲主要语言翻译结果（无标点）：</span>
+        <span class="label">亚洲主要语言翻译结果（保留特定标点）：</span>
         <div class="btn-group">
           <button id="copyRightBtn" class="copy-btn" onclick="copyText('outputRight', 'copyRightBtn')">一键复制</button>
         </div>
       </div>
-      <!-- 结果框（去掉了点击事件，改为纯悬停） -->
       <div id="outputRight" class="result-box">
         等待输入...
         <span id="tooltipRight" class="custom-tooltip">暂无原文</span>
@@ -214,7 +212,14 @@
   <script>
     function removePunctuation(text) {
       return text
+        // 1. 保护时间格式（如 19:05）和数字后面的标点（如 1、 2.）不被误删
+        .replace(/(\d+)([:：])(\d+)/g, '$1__COLON__$2')
+        .replace(/(\d+)([\.,、，])/g, '$1__NUMPUNC__$2')
+        // 2. 清除其他常规标点符号与特殊符号
         .replace(/[\p{P}\p{S}]/gu, '')
+        // 3. 还原被保护的标点
+        .replace(/__COLON__/g, ':')
+        .replace(/__NUMPUNC__/g, '')
         .replace(/\s+/g, ' ')
         .trim();
     }
@@ -248,7 +253,6 @@
           });
           const cleanResult = removePunctuation(translated);
           output.firstChild.nodeValue = cleanResult;
-          // 悬停卡片更新为绿色字体的内容
           tooltip.innerText = "原文本：\n" + text;
         } else {
           output.firstChild.nodeValue = "翻译失败，请重试";
@@ -284,7 +288,6 @@
           });
           const cleanResult = removePunctuation(translated);
           output.firstChild.nodeValue = cleanResult;
-          // 悬停卡片更新为绿色字体的内容
           tooltip.innerText = "原文本：\n" + text;
         } else {
           output.firstChild.nodeValue = "翻译失败，请重试";
@@ -294,7 +297,6 @@
       }
     }
 
-    // 一键清空输入框和结果框的内容
     function clearContent(inputId, outputId) {
       document.getElementById(inputId).value = "";
       if(outputId === 'outputLeft') {
