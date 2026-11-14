@@ -30,8 +30,23 @@
     option { color: #333; padding: 5px; }
     .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; margin-top: 10px; }
     
-    /* 结果框容器：完美跨行与绿色字体、绝对左对齐 */
-    .result-box { padding: 12px; background: #f1f3f5; border-radius: 4px; min-height: 90px; font-size: 16px; color: #28a745; word-break: break-all; white-space: pre-wrap; cursor: default; position: relative; font-weight: bold; text-align: left; }
+    /* 核心修复：彻底抛弃内联 span 嵌套，直接用 div 做绝对左对齐、无缩进的块级排版 */
+    .result-box { 
+      padding: 12px; 
+      background: #f1f3f5; 
+      border-radius: 4px; 
+      min-height: 90px; 
+      font-size: 16px; 
+      color: #28a745; 
+      word-break: break-all; 
+      white-space: pre-wrap; 
+      cursor: default; 
+      position: relative; 
+      font-weight: bold; 
+      text-align: left !important;
+      margin: 0 !important;
+      text-indent: 0 !important;
+    }
     .result-box:hover { background: #e9ecef; }
     
     /* 自定义悬浮提示卡片样式 */
@@ -94,7 +109,7 @@
     <div class="panel">
       <div class="input-header">
         <span class="label">🇨🇳 🇲🇲 🇱🇦 🇹🇭 输入主要语言文本：</span>
-        <button class="clear-btn" onclick="clearContent('inputLeft', 'textLeft', 'tooltipLeft')">✕ 清空</button>
+        <button class="clear-btn" onclick="clearContent('inputLeft', 'outputLeft', 'tooltipLeft')">✕ 清空</button>
       </div>
       <textarea id="inputLeft" placeholder="在此输入中文、缅甸语、老挝语或泰语..."></textarea>
       <div class="tip">⚡ 已开启实时翻译（提示：悬停结果可看原文本）</div>
@@ -153,13 +168,14 @@
       </div>
 
       <div class="result-header">
-        <span class="label">欧洲语种翻译结果（绝对整齐对齐）：</span>
+        <span class="label">欧洲语种翻译结果（完美对齐）：</span>
         <div class="btn-group">
-          <button id="copyLeftBtn" class="copy-btn" onclick="copyText('textLeft', 'copyLeftBtn')">一键复制</button>
+          <button id="copyLeftBtn" class="copy-btn" onclick="copyText('outputLeft', 'copyLeftBtn')">一键复制</button>
         </div>
       </div>
+      <!-- 直接将文本写入 result-box，彻底消除嵌套导致的任何排版偏移 -->
       <div id="outputLeft" class="result-box">
-        <span id="textLeft">等待输入...</span>
+        等待输入...
         <span id="tooltipLeft" class="custom-tooltip">暂无原文</span>
       </div>
     </div>
@@ -168,7 +184,7 @@
     <div class="panel">
       <div class="input-header">
         <span class="label">🌐 输入或粘贴外文/自动检测：</span>
-        <button class="clear-btn" onclick="clearContent('inputRight', 'textRight', 'tooltipRight')">✕ 清空</button>
+        <button class="clear-btn" onclick="clearContent('inputRight', 'outputRight', 'tooltipRight')">✕ 清空</button>
       </div>
       <textarea id="inputRight" placeholder="在此输入任意外文或欧洲语言..."></textarea>
       <div class="tip">⚡ 已开启实时翻译（提示：悬停结果可看原文本）</div>
@@ -197,27 +213,28 @@
       </div>
 
       <div class="result-header">
-        <span class="label">亚洲主要语言翻译结果（绝对整齐对齐）：</span>
+        <span class="label">亚洲主要语言翻译结果（完美对齐）：</span>
         <div class="btn-group">
-          <button id="copyRightBtn" class="copy-btn" onclick="copyText('textRight', 'copyRightBtn')">一键复制</button>
+          <button id="copyRightBtn" class="copy-btn" onclick="copyText('outputRight', 'copyRightBtn')">一键复制</button>
         </div>
       </div>
+      <!-- 直接将文本写入 result-box，彻底消除嵌套导致的任何排版偏移 -->
       <div id="outputRight" class="result-box">
-        <span id="textRight">等待输入...</span>
+        等待输入...
         <span id="tooltipRight" class="custom-tooltip">暂无原文</span>
       </div>
     </div>
   </div>
 
   <script>
-    // 终极单行修复：绝对安全，绝不给非编号行加任何多余前缀，保证完美顶格
+    // 基础符号清理与修复
     function processLine(translatedText, originalLine) {
       let cleaned = translatedText
         .replace(/[\p{P}\p{S}]/gu, '')
         .replace(/\s+/g, ' ')
         .trim();
 
-      // 1. 恢复该行中的时间冒号（如 18:25）
+      // 1. 恢复时间冒号（如 18:25）
       const timeMatches = originalLine.match(/\d+[:：]\d+/g);
       if (timeMatches) {
         timeMatches.forEach(timeStr => {
@@ -229,14 +246,12 @@
         });
       }
 
-      // 2. 只有当【该行原句】明确是以“数字+顿号/点”开头时，才把该行的编号补回
+      // 2. 恢复编号顿号
       const trimmedOrig = originalLine.trim();
       const prefixMatch = trimmedOrig.match(/^(\d+)([\.,、，])/);
       if (prefixMatch) {
         const num = prefixMatch[1];
         const punc = prefixMatch[2];
-        
-        // 如果译文里没有这个数字编号，才在最前面补上；如果已经有了就直接用现成的
         if (!cleaned.startsWith(num)) {
           cleaned = cleaned.replace(new RegExp(`^\\s*(${num})?\\s*`, 'g'), '');
           cleaned = `${num}${punc} ${cleaned}`;
@@ -288,49 +303,66 @@
       const text = document.getElementById('inputLeft').value;
       const sourceLang = document.getElementById('sourceLangLeft').value;
       const targetLang = document.getElementById('targetLangLeft').value;
-      const textSpan = document.getElementById('textLeft');
+      const outputDiv = document.getElementById('outputLeft');
       const tooltip = document.getElementById('tooltipLeft');
 
       if (!text.trim()) {
-        textSpan.innerText = "等待输入...";
-        tooltip.innerText = "暂无原文";
+        outputDiv.innerHTML = '等待输入...<span id="tooltipLeft" class="custom-tooltip">暂无原文</span>';
         return;
       }
-      textSpan.innerText = "实时翻译中...";
+      
+      // 先显示加载中，同时保留 tooltip 结构
+      outputDiv.innerHTML = '实时翻译中...<span id="tooltipLeft" class="custom-tooltip">暂无原文</span>';
 
       const finalResult = await translateText(text, sourceLang, targetLang);
-      textSpan.innerText = finalResult;
-      tooltip.innerText = "原文本:\n" + text;
+      
+      // 直接把纯文本安全写进输出框，并完美带上悬停提示
+      outputDiv.textContent = finalResult;
+      const newTooltip = document.createElement('span');
+      newTooltip.id = 'tooltipLeft';
+      newTooltip.className = 'custom-tooltip';
+      newTooltip.innerText = "原文本:\n" + text;
+      outputDiv.appendChild(newTooltip);
     }
 
     async function translateRightToLeft() {
       const text = document.getElementById('inputRight').value;
       const sourceLang = document.getElementById('sourceLangRight').value;
       const targetLang = document.getElementById('targetLangRight').value;
-      const textSpan = document.getElementById('textRight');
+      const outputDiv = document.getElementById('outputRight');
       const tooltip = document.getElementById('tooltipRight');
 
       if (!text.trim()) {
-        textSpan.innerText = "等待输入...";
-        tooltip.innerText = "暂无原文";
+        outputDiv.innerHTML = '等待输入...<span id="tooltipRight" class="custom-tooltip">暂无原文</span>';
         return;
       }
-      textSpan.innerText = "实时翻译中...";
+      
+      outputDiv.innerHTML = '实时翻译中...<span id="tooltipRight" class="custom-tooltip">暂无原文</span>';
 
       const finalResult = await translateText(text, sourceLang, targetLang);
-      textSpan.innerText = finalResult;
-      tooltip.innerText = "原文本:\n" + text;
+      
+      outputDiv.textContent = finalResult;
+      const newTooltip = document.createElement('span');
+      newTooltip.id = 'tooltipRight';
+      newTooltip.className = 'custom-tooltip';
+      newTooltip.innerText = "原文本:\n" + text;
+      outputDiv.appendChild(newTooltip);
     }
 
-    function clearContent(inputId, outputSpanId, tooltipId) {
+    function clearContent(inputId, outputId, tooltipId) {
       document.getElementById(inputId).value = "";
-      document.getElementById(outputSpanId).innerText = "等待输入...";
-      document.getElementById(tooltipId).innerText = "暂无原文";
+      const outputDiv = document.getElementById(outputId);
+      outputDiv.innerHTML = '等待输入...<span id="' + tooltipId + '" class="custom-tooltip">暂无原文</span>';
     }
 
-    function copyText(textSpanId, btnId) {
-      const textSpan = document.getElementById(textSpanId);
-      const outputText = textSpan.innerText ? textSpan.innerText.trim() : "";
+    function copyText(outputId, btnId) {
+      const outputDiv = document.getElementById(outputId);
+      // 获取文本内容（排除 tooltip 的文本）
+      const clone = outputDiv.cloneNode(true);
+      const tip = clone.querySelector('.custom-tooltip');
+      if (tip) tip.remove();
+      const outputText = clone.textContent ? clone.textContent.trim() : "";
+      
       const copyBtn = document.getElementById(btnId);
 
       if (!outputText || outputText.includes("等待输入") || outputText.includes("实时翻译中") || outputText.includes("异常") || outputText.includes("失败")) {
