@@ -131,7 +131,7 @@
           <option value="th">泰语 (Thai)</option>
         </select>
 
-        <span class="label" style="margin-top: 8px;">目标翻译语言（英语 + 欧洲全语종）：</span>
+        <span class="label" style="margin-top: 8px;">目标翻译语言（英语 + 欧洲全语种）：</span>
         <select id="targetLangLeft" onchange="translateLeftToRight()">
           <optgroup label="✨ 英语与核心欧洲语言">
             <option value="en" selected>英语 (English)</option>
@@ -232,7 +232,7 @@
   </div>
 
   <script>
-    // 宗师级原子级绑定引擎：彻底杜绝任何数字、百分号和独立数字的丢失
+    // 宗师级防丢数字清洗函数：精准区分行首编号与正文数字
     function translateText(text, sourceLang, targetLang) {
       return (async () => {
         const lines = text.split('\n');
@@ -248,8 +248,9 @@
           let prefixPart = "";
           let contentToSend = trimmedLine;
 
-          // 1. 提取行首编号（如 1. 2、 3. 等）
-          const prefixMatch = trimmedLine.match(/^(\d+[\.,、，\/]?)\s*(.*)/);
+          // 1. 【严密修复】：只有当数字后面紧跟点号或顿号，且后面有空格或直接接文字时，才识别为行首编号！
+          // 并且必须确保它不是正文里带百分号或复杂的数字串（例如 "1、" 或 "1."）
+          const prefixMatch = trimmedLine.match(/^(\d+[\.,、])\s+(.*)/) || trimmedLine.match(/^(\d+[\.,、])([^\d].*)/);
           if (prefixMatch && prefixMatch[1]) {
             prefixPart = prefixMatch[1]; 
             contentToSend = prefixMatch[2] ? prefixMatch[2].trim() : ""; 
@@ -267,7 +268,6 @@
           }
 
           // 3. 【原子级精准分词扫描】
-          // 我们使用正则表达式精准识别所有独立数字、百分号、斜杠、小数、时间或连续符号，并把它们与周围的空白和文字完美切开
           const tokenRegex = /(\d+[:：]\d+|\d+(?:\.\d+)?%|\d+\/|\b\d+\b|\d+(?:\.\d+)?%?\s*[-~至]\s*\d+(?:\.\d+)?%?|\d+(?:\.\d+)?|[^\d\s\%\-\~\:\/\u4e00-\u9fa5a-zA-Z]+|[\u4e00-\u9fa5a-zA-Z]+)/g;
           
           let tokens = [];
@@ -283,13 +283,13 @@
           const translatedTokens = [];
 
           for (let token of tokens) {
-            // 如果是纯数字、百分号、斜杠、小数、范围等，绝对不翻译，百分百原封不动保留！
+            // 纯数字、百分号、斜杠、小数、范围等，100%原封不动保留
             if (/^([\d\.\%\-\~\:\/]+)$/.test(token)) {
               translatedTokens.push(token);
               continue;
             }
 
-            // 如果是纯汉字或字母块（如 "美国"、"中国"、"巴西"、"欧洲"），发送给谷歌翻译
+            // 纯汉字或字母块，发送给谷歌翻译
             if (/^[\u4e00-\u9fa5a-zA-Z]+$/.test(token)) {
               try {
                 const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(token)}`;
@@ -308,7 +308,7 @@
                 translatedTokens.push(token);
               }
             } else {
-              // 混合黏连词（如 "32%巴西" 或 "35%中国"），剥离数字和文字
+              // 混合黏连词（如 "25%" 或 "32%巴西"），剥离数字和文字
               let mixMatch = token.match(/^([\d\.\%\-\~\:\/]+)([\u4e00-\u9fa5a-zA-Z]+)([\d\.\%\-\~\:\/]*)$/) ||
                              token.match(/^([\u4e00-\u9fa5a-zA-Z]+)([\d\.\%\-\~\:\/]+)$/);
 
@@ -355,7 +355,6 @@
           // 4. 组装行首编号
           let finalLine = cleanedBody;
           if (prefixPart) {
-            cleanedBody = cleanedBody.replace(/^\d+[\.,、，\/]?\s*/, '');
             finalLine = prefixPart + " " + cleanedBody;
           }
 
