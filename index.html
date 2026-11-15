@@ -232,7 +232,7 @@
   </div>
 
   <script>
-    // 宗师级防丢数字清洗函数：精准区分行首编号与正文数字
+    // 宗师级防丢数字与百分号清洗函数
     function translateText(text, sourceLang, targetLang) {
       return (async () => {
         const lines = text.split('\n');
@@ -248,8 +248,7 @@
           let prefixPart = "";
           let contentToSend = trimmedLine;
 
-          // 1. 【严密修复】：只有当数字后面紧跟点号或顿号，且后面有空格或直接接文字时，才识别为行首编号！
-          // 并且必须确保它不是正文里带百分号或复杂的数字串（例如 "1、" 或 "1."）
+          // 1. 识别行首编号
           const prefixMatch = trimmedLine.match(/^(\d+[\.,、])\s+(.*)/) || trimmedLine.match(/^(\d+[\.,、])([^\d].*)/);
           if (prefixMatch && prefixMatch[1]) {
             prefixPart = prefixMatch[1]; 
@@ -261,7 +260,7 @@
             continue;
           }
 
-          // 2. 检查是否为纯数字/符号行
+          // 2. 纯数字/符号行直接返回
           if (/^[\d\.\%\-\~\s\:\：\至\/]+$/.test(contentToSend)) {
             translatedLines.push(trimmedLine);
             continue;
@@ -283,7 +282,7 @@
           const translatedTokens = [];
 
           for (let token of tokens) {
-            // 纯数字、百分号、斜杠、小数、范围等，100%原封不动保留
+            // 纯数字、百分号、斜杠、小数等原封不动保留
             if (/^([\d\.\%\-\~\:\/]+)$/.test(token)) {
               translatedTokens.push(token);
               continue;
@@ -308,7 +307,7 @@
                 translatedTokens.push(token);
               }
             } else {
-              // 混合黏连词（如 "25%" 或 "32%巴西"），剥离数字和文字
+              // 混合黏连词（如 "25%中国"），彻底确保百分号和数字完美绑定不丢失
               let mixMatch = token.match(/^([\d\.\%\-\~\:\/]+)([\u4e00-\u9fa5a-zA-Z]+)([\d\.\%\-\~\:\/]*)$/) ||
                              token.match(/^([\u4e00-\u9fa5a-zA-Z]+)([\d\.\%\-\~\:\/]+)$/);
 
