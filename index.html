@@ -370,7 +370,7 @@
     async function translateLeftToRight() {
       const text = document.getElementById('inputLeft').value;
       const sourceLang = document.getElementById('sourceLangLeft').value;
-      const targetLang = document.getElementById('targetLangLeft').value;
+      const targetLang = document.getElementById('targetLangLeft').value; // 修复：动态获取当前选中的目标语言
       const outputDiv = document.getElementById('outputLeft');
 
       if (!text.trim()) {
@@ -393,7 +393,7 @@
     async function translateRightToLeft() {
       const text = document.getElementById('inputRight').value;
       const sourceLang = document.getElementById('sourceLangRight').value;
-      const targetLang = document.getElementById('targetLangRight').value;
+      const targetLang = document.getElementById('targetLangRight').value; // 修复：动态获取当前选中的目标语言
       const outputDiv = document.getElementById('outputRight');
 
       if (!text.trim()) {
@@ -413,7 +413,7 @@
       outputDiv.appendChild(newTooltip);
     }
 
-    clearContent = function(inputId, outputId, tooltipId) {
+    function clearContent(inputId, outputId, tooltipId) {
       document.getElementById(inputId).value = "";
       const outputDiv = document.getElementById(outputId);
       outputDiv.innerHTML = '等待输入...<span id="' + tooltipId + '" class="custom-tooltip">暂无原文</span>';
@@ -442,11 +442,13 @@
       });
     }
 
+    // 绑定左侧输入框监听事件
     document.getElementById('inputLeft').addEventListener('input', () => {
       clearTimeout(timerLeft);
       timerLeft = setTimeout(translateLeftToRight, 400);
     });
 
+    // 绑定右侧输入框监听事件
     document.getElementById('inputRight').addEventListener('input', () => {
       clearTimeout(timerRight);
       timerRight = setTimeout(translateRightToLeft, 400);
