@@ -3,7 +3,7 @@
 <head>
   <link rel="manifest" href="manifest.json">
   <meta charset="UTF-8">
-  <title>DS Translation - 双向实时多语种翻译工具</title>
+  <title>DS Translation - 双向实时多语种翻译与货币符号工具</title>
   <!-- 网页标签栏小图标 -->
   <link rel="icon" href="logo.png" type="image/png">
   <style>
@@ -107,7 +107,7 @@
     <img src="logo.png" alt="DS Logo">
     <div class="header-title">
       <h2>DS Translation</h2>
-      <div class="sub-title">双向实时翻译（中缅老泰 ⇄ 欧洲全语种 · 实时响应版）</div>
+      <div class="sub-title">双向实时多语种翻译与智能货币符号工具</div>
     </div>
   </div>
 
@@ -118,8 +118,8 @@
         <span class="label">🇨🇳 🇲🇲 🇱🇦 🇹🇭 输入主要语言文本：</span>
         <button class="clear-btn" onclick="clearContent('inputLeft', 'outputLeft', 'tooltipLeft')">✕ 清空</button>
       </div>
-      <textarea id="inputLeft" placeholder="在此输入任意语言文本..."></textarea>
-      <div class="tip">⚡ 已开启实时翻译（提示：悬停结果可看原文本）</div>
+      <textarea id="inputLeft" placeholder="在此输入带数字和货币的文本（如：价格1234567美元）..."></textarea>
+      <div class="tip">⚡ 已开启实时翻译 + 千分位格式化 + 货币符号转换</div>
       
       <div style="margin-top: 10px;">
         <span class="label">源语言：</span>
@@ -199,7 +199,7 @@
         <button class="clear-btn" onclick="clearContent('inputRight', 'outputRight', 'tooltipRight')">✕ 清空</button>
       </div>
       <textarea id="inputRight" placeholder="在此输入任意外文..."></textarea>
-      <div class="tip">⚡ 已开启实时翻译（提示：悬停结果可看原文本）</div>
+      <div class="tip">⚡ 已开启实时翻译 + 千分位格式化 + 货币符号转换</div>
       
       <div style="margin-top: 10px;">
         <span class="label">源语言：</span>
@@ -248,7 +248,54 @@
   </div>
 
   <script>
-    // 核心整行翻译函数：直接将整段文本完整发送给谷歌 API 进行高质量多语种互译
+    // 1. 数字千分位格式化函数（例如：1234567 ➔ 1,234,567）
+    function formatThousand(text) {
+      // 匹配文本中的独立数字（支持整数和小数）
+      return text.replace(/\b\d+(\.\d+)?\b/g, (match) => {
+        const parts = match.split('.');
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        return parts.join('.');
+      });
+    }
+
+    // 2. 智能货币名称转符号映射表
+    const currencyMap = {
+      // 美元
+      "美元": "$", "US Dollar": "$", "USD": "$", "dollar": "$", "dollars": "$",
+      // 人民币
+      "人民币": "¥", "CNY": "¥", "RMB": "¥", "Chinese Yuan": "¥",
+      // 欧元
+      "欧元": "€", "EUR": "€", "Euro": "€", "Euros": "€",
+      // 英镑
+      "英镑": "£", "GBP": "£", "British Pound": "£", "Pound": "£",
+      // 日元 / 人民币符号通用
+      "日元": "¥", "JPY": "¥", "Yen": "¥",
+      // 泰铢
+      "泰铢": "฿", "THB": "฿", "Baht": "฿",
+      // 缅甸元
+      "缅甸元": "K", "MMK": "K", "Kyat": "K",
+      // 老挝基普
+      "老挝基普": "₭", "LAK": "₭", "Kip": "₭",
+      // 俄罗斯卢布
+      "卢布": "₽", "RUB": "₽", "Ruble": "₽",
+      // 韩元
+      "韩元": "₩", "KRW": "₩", "Won": "₩"
+    };
+
+    // 3. 智能替换货币名称为符号
+    function replaceCurrencySymbols(text) {
+      let result = text;
+      // 按词汇长度降序排列，避免短词优先误伤（如先匹配长词）
+      const sortedKeys = Object.keys(currencyMap).sort((a, b) => b.length - a.length);
+      for (let key of sortedKeys) {
+        // 使用不区分大小写的全局正则匹配货币名称
+        const regex = new RegExp(key, 'gi');
+        result = result.replace(regex, currencyMap[key]);
+      }
+      return result;
+    }
+
+    // 4. 核心翻译与处理函数
     function translateText(text, sourceLang, targetLang) {
       return (async () => {
         if (!text.trim()) return "";
@@ -262,9 +309,18 @@
               if (item[0]) translatedText += item[0];
             });
           }
-          return translatedText.trim() || text;
+          let finalResult = translatedText.trim() || text;
+
+          // 后处理：自动应用千分位数字格式化
+          finalResult = formatThousand(finalResult);
+
+          // 后处理：自动将货币名称转换为符号
+          finalResult = replaceCurrencySymbols(finalResult);
+
+          return finalResult;
         } catch (e) {
-          return text;
+          let fallback = formatThousand(text);
+          return replaceCurrencySymbols(fallback);
         }
       })();
     }
@@ -275,7 +331,7 @@
     async function translateLeftToRight() {
       const text = document.getElementById('inputLeft').value;
       const sourceLang = document.getElementById('sourceLangLeft').value;
-      const targetLang = document.getElementById('targetLangLeft').value; // 实时获取下拉框选中的目标语言
+      const targetLang = document.getElementById('targetLangLeft').value;
       const outputDiv = document.getElementById('outputLeft');
 
       if (!text.trim()) {
@@ -298,7 +354,7 @@
     async function translateRightToLeft() {
       const text = document.getElementById('inputRight').value;
       const sourceLang = document.getElementById('sourceLangRight').value;
-      const targetLang = document.getElementById('targetLangRight').value; // 实时获取下拉框选中的目标语言
+      const targetLang = document.getElementById('targetLangRight').value;
       const outputDiv = document.getElementById('outputRight');
 
       if (!text.trim()) {
