@@ -131,7 +131,7 @@
           <option value="th">泰语 (Thai)</option>
         </select>
 
-        <span class="label" style="margin-top: 8px;">目标翻译语言（英语 + 欧洲全语种）：</span>
+        <span class="label" style="margin-top: 8px;">目标翻译语言（英语 + 欧洲全语종）：</span>
         <select id="targetLangLeft" onchange="translateLeftToRight()">
           <optgroup label="✨ 英语与核心欧洲语言">
             <option value="en" selected>英语 (English)</option>
@@ -232,7 +232,7 @@
   </div>
 
   <script>
-    // 终极绝对不丢数字与符号的零风险解析引擎
+    // 宗师级原子级绑定引擎：彻底杜绝任何数字、百分号和独立数字的丢失
     function translateText(text, sourceLang, targetLang) {
       return (async () => {
         const lines = text.split('\n');
@@ -266,34 +266,36 @@
             continue;
           }
 
-          // 3. 【终极防御隔离】：把整行按空白符拆分成绝对独立的单词单元
-          const tokens = contentToSend.split(/\s+/);
+          // 3. 【原子级精准分词扫描】
+          // 我们使用正则表达式精准识别所有独立数字、百分号、斜杠、小数、时间或连续符号，并把它们与周围的空白和文字完美切开
+          const tokenRegex = /(\d+[:：]\d+|\d+(?:\.\d+)?%|\d+\/|\b\d+\b|\d+(?:\.\d+)?%?\s*[-~至]\s*\d+(?:\.\d+)?%?|\d+(?:\.\d+)?|[^\d\s\%\-\~\:\/\u4e00-\u9fa5a-zA-Z]+|[\u4e00-\u9fa5a-zA-Z]+)/g;
+          
+          let tokens = [];
+          let match;
+          while ((match = tokenRegex.exec(contentToSend)) !== null) {
+            if (match[0]) tokens.push(match[0]);
+          }
+
+          if (tokens.length === 0) {
+            tokens = contentToSend.split(/\s+/);
+          }
+
           const translatedTokens = [];
 
           for (let token of tokens) {
-            if (!token) continue;
-
-            // 如果整个单词就是纯数字、带百分号、斜杠、小数（如 "25"、"25%"、"35%"、"45/"、"52%"），原封不动保留！
-            if (/^[\d\.\%\-\~\:\/]+$/.test(token)) {
+            // 如果是纯数字、百分号、斜杠、小数、范围等，绝对不翻译，百分百原封不动保留！
+            if (/^([\d\.\%\-\~\:\/]+)$/.test(token)) {
               translatedTokens.push(token);
               continue;
             }
 
-            // 如果是“数字/符号”贴着“汉字”（例如 "32%巴西" 或 "35%中国"）
-            // 我们用最暴力的手段：把开头的数字/符号和后面的文字精准剥离！
-            // 匹配开头的数字/百分号/斜杠等符号，与后面的纯文字
-            let complexMatch = token.match(/^([\d\.\%\-\~\:\/]+)([\u4e00-\u9fa5a-zA-Z]+)([\d\.\%\-\~\:\/]*)$/);
-            
-            if (complexMatch) {
-              let leadingSymbol = complexMatch[1]; // 如 "32%"
-              let wordPart = complexMatch[2];       // 如 "巴西"
-              let trailingSymbol = complexMatch[3] || ""; // 后缀
-
+            // 如果是纯汉字或字母块（如 "美国"、"中国"、"巴西"、"欧洲"），发送给谷歌翻译
+            if (/^[\u4e00-\u9fa5a-zA-Z]+$/.test(token)) {
               try {
-                const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(wordPart)}`;
+                const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(token)}`;
                 const res = await fetch(url);
                 const data = await res.json();
-                let translatedWord = wordPart;
+                let translatedWord = token;
                 if (data && data[0]) {
                   translatedWord = "";
                   data[0].forEach(item => {
@@ -301,17 +303,30 @@
                   });
                   translatedWord = translatedWord.replace(/[，,。．?!？！;；""''""（）()\[\]{}《》〈〉]/g, '').trim();
                 }
-                // 完美组合：前置数字符号 + 翻译后的文字 + 后置符号
-                translatedTokens.push(leadingSymbol + translatedWord + trailingSymbol);
+                translatedTokens.push(translatedWord);
               } catch (e) {
                 translatedTokens.push(token);
               }
             } else {
-              // 尝试反向匹配：文字在前，数字在后（例如 "欧洲45/"）
-              let reverseMatch = token.match(/^([\u4e00-\u9fa5a-zA-Z]+)([\d\.\%\-\~\:\/]+)$/);
-              if (reverseMatch) {
-                let wordPart = reverseMatch[1];
-                let trailingSymbol = reverseMatch[2];
+              // 混合黏连词（如 "32%巴西" 或 "35%中国"），剥离数字和文字
+              let mixMatch = token.match(/^([\d\.\%\-\~\:\/]+)([\u4e00-\u9fa5a-zA-Z]+)([\d\.\%\-\~\:\/]*)$/) ||
+                             token.match(/^([\u4e00-\u9fa5a-zA-Z]+)([\d\.\%\-\~\:\/]+)$/);
+
+              if (mixMatch) {
+                let preNum = "";
+                let wordPart = "";
+                let sufNum = "";
+
+                if (/^[\d\.\%\-\~\:\/]+$/.test(mixMatch[1]) && /^[\u4e00-\u9fa5a-zA-Z]+$/.test(mixMatch[2])) {
+                  preNum = mixMatch[1];
+                  wordPart = mixMatch[2];
+                  sufNum = mixMatch[3] || "";
+                } else if (/^[\u4e00-\u9fa5a-zA-Z]+$/.test(mixMatch[1]) && /^[\d\.\%\-\~\:\/]+$/.test(mixMatch[2])) {
+                  wordPart = mixMatch[1];
+                  sufNum = mixMatch[2];
+                } else {
+                  wordPart = token;
+                }
 
                 try {
                   const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(wordPart)}`;
@@ -325,28 +340,12 @@
                     });
                     translatedWord = translatedWord.replace(/[，,。．?!？！;；""''""（）()\[\]{}《》〈〉]/g, '').trim();
                   }
-                  translatedTokens.push(translatedWord + trailingSymbol);
+                  translatedTokens.push(preNum + translatedWord + sufNum);
                 } catch (e) {
                   translatedTokens.push(token);
                 }
               } else {
-                // 普通纯文字块，正常走翻译
-                try {
-                  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(token)}`;
-                  const res = await fetch(url);
-                  const data = await res.json();
-                  let translatedToken = token;
-                  if (data && data[0]) {
-                    translatedToken = "";
-                    data[0].forEach(item => {
-                      if (item[0]) translatedToken += item[0];
-                    });
-                    translatedToken = translatedToken.replace(/[，,。．?!？！;；""''""（）()\[\]{}《》〈〉]/g, '').trim();
-                  }
-                  translatedTokens.push(translatedToken);
-                } catch (e) {
-                  translatedTokens.push(token);
-                }
+                translatedTokens.push(token);
               }
             }
           }
