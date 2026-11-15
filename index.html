@@ -118,7 +118,7 @@
         <span class="label">🇨🇳 🇲🇲 🇱🇦 🇹🇭 输入主要语言文本：</span>
         <button class="clear-btn" onclick="clearContent('inputLeft', 'outputLeft', 'tooltipLeft')">✕ 清空</button>
       </div>
-      <textarea id="inputLeft" placeholder="在此输入中文、缅甸语、老挝语或泰语..."></textarea>
+      <textarea id="inputLeft" placeholder="在此输入任意语言文本..."></textarea>
       <div class="tip">⚡ 已开启实时翻译（提示：悬停结果可看原文本）</div>
       
       <div style="margin-top: 10px;">
@@ -175,7 +175,7 @@
       </div>
 
       <div class="result-header">
-        <span class="label">欧洲语种翻译结果（完美对齐）：</span>
+        <span class="label">目标语种翻译结果（完美对齐）：</span>
         <div class="btn-group">
           <button id="copyLeftBtn" class="copy-btn" onclick="copyText('outputLeft', 'copyLeftBtn')">一键复制</button>
         </div>
@@ -192,7 +192,7 @@
         <span class="label">🌐 输入或粘贴外文/自动检测：</span>
         <button class="clear-btn" onclick="clearContent('inputRight', 'outputRight', 'tooltipRight')">✕ 清空</button>
       </div>
-      <textarea id="inputRight" placeholder="在此输入任意外文或欧洲语言..."></textarea>
+      <textarea id="inputRight" placeholder="在此输入任意外文..."></textarea>
       <div class="tip">⚡ 已开启实时翻译（提示：悬停结果可看原文本）</div>
       
       <div style="margin-top: 10px;">
@@ -232,7 +232,7 @@
   </div>
 
   <script>
-    // 宗师级防丢数字与百分号清洗函数
+    // 全语种通用翻译函数（支持中、英、缅、老、泰及全欧洲语种互译）
     function translateText(text, sourceLang, targetLang) {
       return (async () => {
         const lines = text.split('\n');
@@ -266,8 +266,9 @@
             continue;
           }
 
-          // 3. 【原子级精准分词扫描】
-          const tokenRegex = /(\d+[:：]\d+|\d+(?:\.\d+)?%|\d+\/|\b\d+\b|\d+(?:\.\d+)?%?\s*[-~至]\s*\d+(?:\.\d+)?%?|\d+(?:\.\d+)?|[^\d\s\%\-\~\:\/\u4e00-\u9fa5a-zA-Z]+|[\u4e00-\u9fa5a-zA-Z]+)/g;
+          // 3. 【全语种通用分词：放宽至匹配所有文字、数字和符号】
+          // 只要不是纯数字/符号的词块，全部允许送往谷歌翻译
+          const tokenRegex = /(\d+[:：]\d+|\d+(?:\.\d+)?%|\d+\/|\b\d+\b|\d+(?:\.\d+)?%?\s*[-~至]\s*\d+(?:\.\d+)?%?|\d+(?:\.\d+)?|[^\d\s\%\-\~\:\/]+)/g;
           
           let tokens = [];
           let match;
@@ -282,14 +283,14 @@
           const translatedTokens = [];
 
           for (let token of tokens) {
-            // 纯数字、百分号、斜杠、小数等原封不动保留
+            // 纯数字、百分号、斜杠等原封不动保留
             if (/^([\d\.\%\-\~\:\/]+)$/.test(token)) {
               translatedTokens.push(token);
               continue;
             }
 
-            // 纯汉字或字母块，发送给谷歌翻译
-            if (/^[\u4e00-\u9fa5a-zA-Z]+$/.test(token)) {
+            // 只要包含任意文字字符，即发送给谷歌翻译
+            if (/[^\d\s\%\-\~\:\/]/.test(token)) {
               try {
                 const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(token)}`;
                 const res = await fetch(url);
@@ -307,45 +308,7 @@
                 translatedTokens.push(token);
               }
             } else {
-              // 混合黏连词（如 "25%中国"），彻底确保百分号和数字完美绑定不丢失
-              let mixMatch = token.match(/^([\d\.\%\-\~\:\/]+)([\u4e00-\u9fa5a-zA-Z]+)([\d\.\%\-\~\:\/]*)$/) ||
-                             token.match(/^([\u4e00-\u9fa5a-zA-Z]+)([\d\.\%\-\~\:\/]+)$/);
-
-              if (mixMatch) {
-                let preNum = "";
-                let wordPart = "";
-                let sufNum = "";
-
-                if (/^[\d\.\%\-\~\:\/]+$/.test(mixMatch[1]) && /^[\u4e00-\u9fa5a-zA-Z]+$/.test(mixMatch[2])) {
-                  preNum = mixMatch[1];
-                  wordPart = mixMatch[2];
-                  sufNum = mixMatch[3] || "";
-                } else if (/^[\u4e00-\u9fa5a-zA-Z]+$/.test(mixMatch[1]) && /^[\d\.\%\-\~\:\/]+$/.test(mixMatch[2])) {
-                  wordPart = mixMatch[1];
-                  sufNum = mixMatch[2];
-                } else {
-                  wordPart = token;
-                }
-
-                try {
-                  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(wordPart)}`;
-                  const res = await fetch(url);
-                  const data = await res.json();
-                  let translatedWord = wordPart;
-                  if (data && data[0]) {
-                    translatedWord = "";
-                    data[0].forEach(item => {
-                      if (item[0]) translatedWord += item[0];
-                    });
-                    translatedWord = translatedWord.replace(/[，,。．?!？！;；""''""（）()\[\]{}《》〈〉]/g, '').trim();
-                  }
-                  translatedTokens.push(preNum + translatedWord + sufNum);
-                } catch (e) {
-                  translatedTokens.push(token);
-                }
-              } else {
-                translatedTokens.push(token);
-              }
+              translatedTokens.push(token);
             }
           }
 
@@ -370,7 +333,7 @@
     async function translateLeftToRight() {
       const text = document.getElementById('inputLeft').value;
       const sourceLang = document.getElementById('sourceLangLeft').value;
-      const targetLang = document.getElementById('targetLangLeft').value; // 修复：动态获取当前选中的目标语言
+      const targetLang = document.getElementById('targetLangLeft').value; 
       const outputDiv = document.getElementById('outputLeft');
 
       if (!text.trim()) {
@@ -393,7 +356,7 @@
     async function translateRightToLeft() {
       const text = document.getElementById('inputRight').value;
       const sourceLang = document.getElementById('sourceLangRight').value;
-      const targetLang = document.getElementById('targetLangRight').value; // 修复：动态获取当前选中的目标语言
+      const targetLang = document.getElementById('targetLangRight').value; 
       const outputDiv = document.getElementById('outputRight');
 
       if (!text.trim()) {
