@@ -131,7 +131,7 @@
           <option value="th">泰语 (Thai)</option>
         </select>
 
-        <span class="label" style="margin-top: 8px;">目标翻译语言（英语 + 欧洲全语种）：</span>
+        <span class="label" style="margin-top: 8px;">目标翻译语言：</span>
         <select id="targetLangLeft" onchange="translateLeftToRight()">
           <optgroup label="✨ 英语与核心欧洲语言">
             <option value="en" selected>英语 (English)</option>
@@ -171,6 +171,12 @@
             <option value="mt">马耳他语 (Maltese)</option>
             <option value="cy">威尔士语 (Welsh)</option>
           </optgroup>
+          <optgroup label="✨ 亚洲主要翻译目标">
+            <option value="zh-CN">中文 (Chinese)</option>
+            <option value="my">缅甸语 (Burmese)</option>
+            <option value="lo">老挝语 (Lao)</option>
+            <option value="th">泰语 (Thai)</option>
+          </optgroup>
         </select>
       </div>
 
@@ -207,7 +213,7 @@
           <option value="tr">土耳其语 (Turkish)</option>
         </select>
 
-        <span class="label" style="margin-top: 8px;">目标翻译语言（转主要亚洲语言）：</span>
+        <span class="label" style="margin-top: 8px;">目标翻译语言：</span>
         <select id="targetLangRight" onchange="translateRightToLeft()">
           <optgroup label="✨ 主要翻译目标">
             <option value="zh-CN" selected>中文 (Chinese)</option>
@@ -215,11 +221,21 @@
             <option value="lo">老挝语 (Lao)</option>
             <option value="th">泰语 (Thai)</option>
           </optgroup>
+          <optgroup label="✨ 英语与核心欧洲语言">
+            <option value="en">英语 (English)</option>
+            <option value="fr">法语 (French)</option>
+            <option value="de">德语 (German)</option>
+            <option value="es">西班牙语 (Spanish)</option>
+            <option value="it">意大利语 (Italian)</option>
+            <option value="ru">俄语 (Russian)</option>
+            <option value="pt">葡萄牙语 (Portuguese)</option>
+            <option value="tr">土耳其语 (Turkish)</option>
+          </optgroup>
         </select>
       </div>
 
       <div class="result-header">
-        <span class="label">亚洲主要语言翻译结果（完美对齐）：</span>
+        <span class="label">目标语种翻译结果（完美对齐）：</span>
         <div class="btn-group">
           <button id="copyRightBtn" class="copy-btn" onclick="copyText('outputRight', 'copyRightBtn')">一键复制</button>
         </div>
@@ -232,98 +248,24 @@
   </div>
 
   <script>
-    // 全语种通用翻译函数（支持中、英、缅、老、泰及全欧洲语种互译）
+    // 核心整行翻译函数：直接将整段文本完整发送给谷歌 API 进行高质量多语种互译
     function translateText(text, sourceLang, targetLang) {
       return (async () => {
-        const lines = text.split('\n');
-        const translatedLines = [];
-
-        for (let line of lines) {
-          const trimmedLine = line.replace(/^[\s\u3000]+/, '').trim();
-          if (!trimmedLine) {
-            translatedLines.push(""); 
-            continue;
+        if (!text.trim()) return "";
+        try {
+          const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
+          const res = await fetch(url);
+          const data = await res.json();
+          let translatedText = "";
+          if (data && data[0]) {
+            data[0].forEach(item => {
+              if (item[0]) translatedText += item[0];
+            });
           }
-
-          let prefixPart = "";
-          let contentToSend = trimmedLine;
-
-          // 1. 识别行首编号
-          const prefixMatch = trimmedLine.match(/^(\d+[\.,、])\s+(.*)/) || trimmedLine.match(/^(\d+[\.,、])([^\d].*)/);
-          if (prefixMatch && prefixMatch[1]) {
-            prefixPart = prefixMatch[1]; 
-            contentToSend = prefixMatch[2] ? prefixMatch[2].trim() : ""; 
-          }
-
-          if (!contentToSend) {
-            translatedLines.push(trimmedLine);
-            continue;
-          }
-
-          // 2. 纯数字/符号行直接返回
-          if (/^[\d\.\%\-\~\s\:\：\至\/]+$/.test(contentToSend)) {
-            translatedLines.push(trimmedLine);
-            continue;
-          }
-
-          // 3. 【全语种通用分词：放宽至匹配所有文字、数字和符号】
-          // 只要不是纯数字/符号的词块，全部允许送往谷歌翻译
-          const tokenRegex = /(\d+[:：]\d+|\d+(?:\.\d+)?%|\d+\/|\b\d+\b|\d+(?:\.\d+)?%?\s*[-~至]\s*\d+(?:\.\d+)?%?|\d+(?:\.\d+)?|[^\d\s\%\-\~\:\/]+)/g;
-          
-          let tokens = [];
-          let match;
-          while ((match = tokenRegex.exec(contentToSend)) !== null) {
-            if (match[0]) tokens.push(match[0]);
-          }
-
-          if (tokens.length === 0) {
-            tokens = contentToSend.split(/\s+/);
-          }
-
-          const translatedTokens = [];
-
-          for (let token of tokens) {
-            // 纯数字、百分号、斜杠等原封不动保留
-            if (/^([\d\.\%\-\~\:\/]+)$/.test(token)) {
-              translatedTokens.push(token);
-              continue;
-            }
-
-            // 只要包含任意文字字符，即发送给谷歌翻译
-            if (/[^\d\s\%\-\~\:\/]/.test(token)) {
-              try {
-                const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(token)}`;
-                const res = await fetch(url);
-                const data = await res.json();
-                let translatedWord = token;
-                if (data && data[0]) {
-                  translatedWord = "";
-                  data[0].forEach(item => {
-                    if (item[0]) translatedWord += item[0];
-                  });
-                  translatedWord = translatedWord.replace(/[，,。．?!？！;；""''""（）()\[\]{}《》〈〉]/g, '').trim();
-                }
-                translatedTokens.push(translatedWord);
-              } catch (e) {
-                translatedTokens.push(token);
-              }
-            } else {
-              translatedTokens.push(token);
-            }
-          }
-
-          let cleanedBody = translatedTokens.join(' ').replace(/\s+/g, ' ').trim();
-
-          // 4. 组装行首编号
-          let finalLine = cleanedBody;
-          if (prefixPart) {
-            finalLine = prefixPart + " " + cleanedBody;
-          }
-
-          translatedLines.push(finalLine);
+          return translatedText.trim() || text;
+        } catch (e) {
+          return text;
         }
-
-        return translatedLines.join('\n');
       })();
     }
 
@@ -333,7 +275,7 @@
     async function translateLeftToRight() {
       const text = document.getElementById('inputLeft').value;
       const sourceLang = document.getElementById('sourceLangLeft').value;
-      const targetLang = document.getElementById('targetLangLeft').value; 
+      const targetLang = document.getElementById('targetLangLeft').value; // 实时获取下拉框选中的目标语言
       const outputDiv = document.getElementById('outputLeft');
 
       if (!text.trim()) {
@@ -356,7 +298,7 @@
     async function translateRightToLeft() {
       const text = document.getElementById('inputRight').value;
       const sourceLang = document.getElementById('sourceLangRight').value;
-      const targetLang = document.getElementById('targetLangRight').value; 
+      const targetLang = document.getElementById('targetLangRight').value; // 实时获取下拉框选中的目标语言
       const outputDiv = document.getElementById('outputRight');
 
       if (!text.trim()) {
