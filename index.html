@@ -66,10 +66,10 @@
     .copy-btn.copied { background: #6c757d; }
     .tip { font-size: 12px; color: #28a745; margin-top: 5px; font-weight: bold; }
 
-    /* 🔐 密码登录遮罩层样式 */
+    /* 🔐 密码登录遮罩层样式（强制绝对置顶） */
     #auth-overlay {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.85); z-index: 9999;
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.85); z-index: 999999;
       display: flex; justify-content: center; align-items: center;
     }
     .auth-box {
@@ -89,12 +89,12 @@
 </head>
 <body>
 
-  <!-- 🔐 密码验证弹窗遮罩 -->
+  <!-- 🔐 密码验证弹窗遮罩（默认显示） -->
   <div id="auth-overlay">
     <div class="auth-box">
       <h3>🔒 请输入您的专属使用密码</h3>
       <p style="font-size: 13px; color: #666;">提示：一个密码仅限一台设备使用</p>
-      <input type="password" id="accessPassword" placeholder="请输入密码...">
+      <input type="password" id="accessPassword" placeholder="请输入密码..." autofocus>
       <button onclick="verifyPassword()">确认进入</button>
       <div id="authErrorMsg" class="auth-error">密码错误或已被其他设备占用！</div>
     </div>
@@ -249,10 +249,8 @@
     // -------------------------------------------------------------------------
     // 🔐 密码与单设备防多开控制逻辑
     // -------------------------------------------------------------------------
-    // 有效密码列表（您可以自由修改和增减密码）
     const validPasswords = ["Bds8001", "Bds8002", "Bds8003", "Bds8004", "Bds8005", "Bds8006", "Bds8007", "Bds8008", "Bds8009", "Bds8010", "Bds8011", "Cds8001", "Cds8002", "Cds8003", "Cds8004", "Cds8005", "Cds8006", "Cds8007", "Cds8008", "Cds8009", "Cds8010", "Cds8011", "Dds8001", "Dds8002", "Dds8003", "Dds8004", "Dds8005", "Dds8006","Eds8001", "Eds8002", "Eds8003","Xds8001", "Xds8002", "Tds8000"];
 
-    // 生成或获取当前浏览器的唯一设备指纹 ID
     function getDeviceToken() {
       let token = localStorage.getItem('ds_device_token');
       if (!token) {
@@ -262,25 +260,24 @@
       return token;
     }
 
-    // 页面加载时检查是否已经登录过
+    // 页面加载时严格校验设备绑定
     window.addEventListener('DOMContentLoaded', () => {
       const savedPass = localStorage.getItem('ds_active_password');
       const currentDev = getDeviceToken();
+      const overlay = document.getElementById('auth-overlay');
       
       if (savedPass && validPasswords.includes(savedPass)) {
-        // 检查该密码当前绑定的设备
         const boundDev = localStorage.getItem('ds_bind_' + savedPass);
-        if (!boundDev || boundDev === currentDev) {
-          // 验证通过，隐藏登录框
-          document.getElementById('auth-overlay').style.display = 'none';
-        } else {
-          // 被其他设备抢登了，清除状态
-          localStorage.removeItem('ds_active_password');
+        if (boundDev && boundDev === currentDev) {
+          // 只有设备匹配时才隐藏遮罩
+          overlay.style.display = 'none';
+          return;
         }
       }
+      // 否则强制显示弹窗
+      overlay.style.display = 'flex';
     });
 
-    // 验证密码提交函数
     function verifyPassword() {
       const inputVal = document.getElementById('accessPassword').value.trim();
       const errorMsg = document.getElementById('authErrorMsg');
@@ -292,7 +289,6 @@
         return;
       }
 
-      // 检查该密码是否被其他设备占用
       const boundDevKey = 'ds_bind_' + inputVal;
       const boundDev = localStorage.getItem(boundDevKey);
 
@@ -302,13 +298,11 @@
         return;
       }
 
-      // 绑定当前设备并放行
       localStorage.setItem(boundDevKey, currentDev);
       localStorage.setItem('ds_active_password', inputVal);
       document.getElementById('auth-overlay').style.display = 'none';
     }
 
-    // 回车直接登录
     document.getElementById('accessPassword').addEventListener('keypress', function(e) {
       if (e.key === 'Enter') {
         verifyPassword();
