@@ -75,7 +75,7 @@
   <div id="auth-overlay">
     <div class="auth-box">
       <h3>🔒 请输入您的专属使用密码</h3>
-      <p style="font-size: 13px; color: #666;">提示：一个密码仅限一台设备使用</p>
+      <p style="font-size: 13px; color: #666;">提示：关闭网页后需重新验证密码</p>
       <input type="password" id="accessPassword" placeholder="请输入密码..." autofocus>
       <button id="loginBtn" onclick="verifyPassword()">确认进入</button>
       <div id="authErrorMsg" class="auth-error"></div>
@@ -229,7 +229,7 @@
 
   <script>
     // =========================================================================
-    // 1. 已成功绑定您的 JSONBin 云端授权配置
+    // 1. JSONBin 云端授权配置
     // =========================================================================
     const BIN_ID = "6afadd49ac6210605a8b842b"; 
     const MASTER_KEY = "$2a$10$YSUEua/pdNyKyajJ8a3/zO4uAzFTYFo.PKdneP6Kauz551LzzLtVC";
@@ -239,6 +239,7 @@
     const validPasswords = ["Bds8001", "Bds8002", "Bds8003", "Bds8004", "Bds8005", "Bds8006", "Bds8007", "Bds8008", "Bds8009", "Bds8010", "Bds8011", "Cds8001", "Cds8002", "Cds8003", "Cds8004", "Cds8005", "Cds8006", "Cds8007", "Cds8008", "Cds8009", "Cds8010", "Cds8011", "Dds8001", "Dds8002", "Dds8003", "Dds8004", "Dds8005", "Dds8006","Eds8001", "Eds8002", "Eds8003","Xds8001", "Xds8002", "Tds8000"];
 
     function getDeviceToken() {
+      // 设备固定标识仍存放在 localStorage 中（确保同一台电脑指纹不变）
       let token = localStorage.getItem('ds_device_token');
       if (!token) {
         token = 'dev_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
@@ -247,9 +248,10 @@
       return token;
     }
 
-    // 页面每次打开时，强制去云端核对当前电脑是否仍拥有该密码的绑定权
+    // 页面每次加载时：改用 sessionStorage 检查
     window.addEventListener('DOMContentLoaded', async () => {
-      const savedPass = localStorage.getItem('ds_active_password');
+      // 使用 sessionStorage：只要关闭过网页标签，这里就会变成 null，从而强制弹窗
+      const savedPass = sessionStorage.getItem('ds_active_password');
       const currentDev = getDeviceToken();
       const overlay = document.getElementById('auth-overlay');
 
@@ -323,7 +325,8 @@
           if (!updateRes.ok) throw new Error("绑定写入失败");
         }
 
-        localStorage.setItem('ds_active_password', inputVal);
+        // 登录成功：存入 sessionStorage（关闭网页后自动失效）
+        sessionStorage.setItem('ds_active_password', inputVal);
         document.getElementById('auth-overlay').style.display = 'none';
       } catch (e) {
         errorMsg.innerText = "验证失败：" + e.message + "（请检查网络或联系管理员）";
