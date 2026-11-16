@@ -47,7 +47,6 @@
     .copy-btn.copied { background: #6c757d; }
     .tip { font-size: 12px; color: #28a745; margin-top: 5px; font-weight: bold; }
 
-    /* 密码登录遮罩层样式 */
     #auth-overlay {
       position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
       background: rgba(0, 0, 0, 0.9); z-index: 999999;
@@ -71,7 +70,6 @@
 </head>
 <body>
 
-  <!-- 密码验证弹窗遮罩 -->
   <div id="auth-overlay">
     <div class="auth-box">
       <h3>🔒 请输入您的专属使用密码</h3>
@@ -82,7 +80,6 @@
     </div>
   </div>
 
-  <!-- 顶部 Logo 与标题展示 -->
   <div class="header-box">
     <img src="logo.png" alt="DS Logo">
     <div class="header-title">
@@ -99,7 +96,7 @@
         <button class="clear-btn" onclick="clearContent('inputLeft', 'outputLeft', 'tooltipLeft')">✕ 清空</button>
       </div>
       <textarea id="inputLeft" placeholder="在此输入带数字和货币的文本..."></textarea>
-      <div class="tip">⚡ 已开启实时翻译 + 智能货币格式化</div>
+      <div class="tip">⚡ 已开启双引擎实时翻译 + 智能货币格式化</div>
       
       <div style="margin-top: 10px;">
         <span class="label">源语言：</span>
@@ -179,7 +176,7 @@
         <button class="clear-btn" onclick="clearContent('inputRight', 'outputRight', 'tooltipRight')">✕ 清空</button>
       </div>
       <textarea id="inputRight" placeholder="在此输入任意外文..."></textarea>
-      <div class="tip">⚡ 已开启实时翻译 + 智能货币格式化</div>
+      <div class="tip">⚡ 已开启双引擎实时翻译 + 智能货币格式化</div>
       
       <div style="margin-top: 10px;">
         <span class="label">源语言：</span>
@@ -324,7 +321,7 @@
     });
 
     // =========================================================================
-    // 翻译与智能货币排版核心逻辑
+    // 2. 智能货币排版核心逻辑（精确词边界匹配，绝不误伤 USDT / USDC）
     // =========================================================================
     const currencyMap = {
       "美元": "$", "US Dollar": "$", "USD": "$", "dollar": "$", "dollars": "$",
@@ -342,22 +339,28 @@
     function formatMoneyAndThousand(text) {
       let result = text;
       
-      if (/USDT|USDC/i.test(result)) {
-        return result;
-      }
+      // 1. 先保护 USDT 和 USDC 为临时占位符，防止里面的 USD 被替换成 $
+      result = result.replace(/\bUSDT\b/gi, '___KEEP_USDT___');
+      result = result.replace(/\bUSDC\b/gi, '___KEEP_USDC___');
 
+      // 2. 替换文字货币为符号（纯英文代码加词边界 \b，避免误伤其他单词）
       const sortedKeys = Object.keys(currencyMap).sort((a, b) => b.length - a.length);
       for (let key of sortedKeys) {
-        const regex = new RegExp(key, 'gi');
+        const isAscii = /^[A-Za-z\s]+$/.test(key);
+        const pattern = isAscii ? `\\b${key}\\b` : key;
+        const regex = new RegExp(pattern, 'gi');
         result = result.replace(regex, currencyMap[key]);
       }
 
+      // 3. 还原 USDT 和 USDC
+      result = result.replace(/___KEEP_USDT___/g, 'USDT');
+      result = result.replace(/___KEEP_USDC___/g, 'USDC');
+
+      // 4. 按行处理数字千分位
       let lines = result.split('\n');
       lines = lines.map(line => {
         const hasCurrency = /[$¥€£฿K₭₽₩]/.test(line);
-        if (!hasCurrency) {
-          return line;
-        }
+        if (!hasCurrency) return line;
 
         let formattedLine = line.replace(/([$¥€£฿K₭₽₩])\s*(\d+)(\.\d+)?/g, (match, symbol, intPart, decPart) => {
           let formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -375,23 +378,59 @@
       return lines.join('\n');
     }
 
-    function translateText(text, sourceLang, targetLang) {
-      return (async () => {
-        if (!text.trim()) return "";
-        try {
-          const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
-          const res = await fetch(url);
+    // =========================================================================
+    // 3. 双引擎翻译核心（谷歌主引擎 + 备用免代理引擎，彻底解决翻译失效）
+    // =========================================================================
+    async function translateText(text, sourceLang, targetLang) {
+      if (!text.trim()) return "";
+
+      // 引擎 A：尝试 Google 翻译接口（带 3 秒超时控制）
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
+        const res = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        
+        if (res.ok) {
           const data = await res.json();
           let translatedText = "";
           if (data && data[0]) {
             data[0].forEach(item => { if (item[0]) translatedText += item[0]; });
           }
-          let finalResult = translatedText.trim() || text;
-          return formatMoneyAndThousand(finalResult);
-        } catch (e) {
+          if (translatedText.trim()) {
+            return formatMoneyAndThousand(translatedText.trim());
+          }
+        }
+      } catch (e) {
+        // 谷歌接口超时或被拦截时，静默切换到备用引擎 B
+      }
+
+      // 引擎 B：MyMemory 国际公共翻译接口（全网免代理直连）
+      try {
+        // 自动检测源语言（MyMemory 不支持 auto，简单判断中英文，其他默认 en）
+        let src = sourceLang;
+        if (src === 'auto') {
+          src = /[\u4e00-\u9fa5]/.test(text) ? 'zh-CN' : 'en';
+        }
+        // 如果源语言和目标语言一致，直接格式化返回
+        if (src === targetLang) {
           return formatMoneyAndThousand(text);
         }
-      })();
+
+        const backupUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${src}|${targetLang}`;
+        const resB = await fetch(backupUrl);
+        if (resB.ok) {
+          const dataB = await resB.json();
+          if (dataB && dataB.responseData && dataB.responseData.translatedText) {
+            return formatMoneyAndThousand(dataB.responseData.translatedText.trim());
+          }
+        }
+      } catch (e2) {
+        return "[翻译网络连接失败，请检查网络] " + formatMoneyAndThousand(text);
+      }
+
+      return formatMoneyAndThousand(text);
     }
 
     let timerLeft = null;
@@ -454,28 +493,4 @@
 
       navigator.clipboard.writeText(outputText).then(() => {
         copyBtn.innerText = "已复制！";
-        copyBtn.classList.add("copied");
-        setTimeout(() => {
-          copyBtn.innerText = "一键复制";
-          copyBtn.classList.remove("copied");
-        }, 1500);
-      });
-    }
-
-    // 【核心修复】：确保输入时正确触发防抖和翻译
-    document.getElementById('inputLeft').addEventListener('input', () => {
-      clearTimeout(timerLeft);
-      timerLeft = setTimeout(() => {
-        translateLeftToRight();
-      }, 400);
-    });
-
-    document.getElementById('inputRight').addEventListener('input', () => {
-      clearTimeout(timerRight);
-      timerRight = setTimeout(() => {
-        translateRightToLeft();
-      }, 400);
-    });
-  </script>
-</body>
-</html>
+        copy
