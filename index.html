@@ -7,46 +7,28 @@
   <link rel="icon" href="logo.png" type="image/png">
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; max-width: 1200px; margin: 0 auto; background: #f9f9f9; }
-    
-    /* 顶部 Logo 样式 */
     .header-box { text-align: center; margin-bottom: 25px; }
     .header-box img { width: 80px; height: 80px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); vertical-align: middle; margin-right: 15px; }
     .header-title { display: inline-block; vertical-align: middle; text-align: left; }
     h2 { color: #222; margin: 0; font-size: 24px; }
     .sub-title { color: #666; font-size: 14px; margin-top: 5px; }
-
     .container { display: flex; gap: 20px; flex-wrap: wrap; }
     .panel { flex: 1; min-width: 320px; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-    
     .input-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
     .clear-btn { background: none; border: none; color: #999; font-size: 13px; cursor: pointer; padding: 2px 6px; border-radius: 4px; transition: all 0.2s; }
     .clear-btn:hover { background: #eee; color: #d9534f; }
-
     textarea { width: 100%; height: 120px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; resize: vertical; box-sizing: border-box; }
     select { padding: 10px; border-radius: 4px; border: 1px solid #ddd; font-size: 15px; width: 100%; max-width: 350px; margin-bottom: 10px; background: #fff; cursor: pointer; }
     optgroup { font-weight: bold; color: #007bff; }
     option { color: #333; padding: 5px; }
     .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; margin-top: 10px; }
-    
     .result-box { 
-      padding: 12px; 
-      background: #000000 !important; 
-      border: 1px solid #222222 !important;
-      border-radius: 4px; 
-      min-height: 90px; 
-      font-size: 16px; 
-      color: #ffffff !important; 
-      word-break: break-all; 
-      white-space: pre-wrap; 
-      cursor: default; 
-      position: relative; 
-      font-weight: bold; 
-      text-align: left !important;
-      direction: ltr !important;
+      padding: 12px; background: #000000 !important; border: 1px solid #222222 !important; border-radius: 4px; 
+      min-height: 90px; font-size: 16px; color: #ffffff !important; word-break: break-all; white-space: pre-wrap; 
+      cursor: default; position: relative; font-weight: bold; text-align: left !important; direction: ltr !important;
       text-shadow: -0.6px -0.6px 0 #ff1744, 0.6px -0.6px 0 #ff1744, -0.6px 0.6px 0 #ff1744, 0.6px 0.6px 0 #ff1744 !important;
     }
     .result-box:hover { background: #111111 !important; }
-    
     .custom-tooltip {
       visibility: hidden; background-color: #222222; color: #ffffff; text-align: left; border-radius: 6px;
       padding: 8px 12px; position: absolute; z-index: 10; bottom: 110%; left: 10px;
@@ -58,7 +40,6 @@
       content: ""; position: absolute; top: 100%; left: 20px; border-width: 6px; border-style: solid; border-color: #222222 transparent transparent transparent;
     }
     .result-box:hover .custom-tooltip { visibility: visible; opacity: 1; }
-
     .label { font-weight: bold; color: #555; display: inline-block; }
     .btn-group { display: flex; gap: 10px; align-items: center; }
     .copy-btn { padding: 6px 15px; background: #007bff; color: #fff; border: none; border-radius: 4px; font-size: 14px; cursor: pointer; transition: background 0.2s; }
@@ -66,10 +47,10 @@
     .copy-btn.copied { background: #6c757d; }
     .tip { font-size: 12px; color: #28a745; margin-top: 5px; font-weight: bold; }
 
-    /* 🔐 密码登录遮罩层样式 */
+    /* 密码登录遮罩层样式 */
     #auth-overlay {
       position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-      background: rgba(0, 0, 0, 0.85); z-index: 999999;
+      background: rgba(0, 0, 0, 0.9); z-index: 999999;
       display: flex; justify-content: center; align-items: center;
     }
     .auth-box {
@@ -84,19 +65,20 @@
       width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer;
     }
     .auth-box button:hover { background: #0056b3; }
-    .auth-error { color: #d9534f; font-size: 13px; margin-top: 10px; display: none; }
+    .auth-box button:disabled { background: #999; cursor: not-allowed; }
+    .auth-error { color: #d9534f; font-size: 13px; margin-top: 10px; display: none; font-weight: bold; }
   </style>
 </head>
 <body>
 
-  <!-- 🔐 密码验证弹窗遮罩 -->
+  <!-- 密码验证弹窗遮罩 -->
   <div id="auth-overlay">
     <div class="auth-box">
       <h3>🔒 请输入您的专属使用密码</h3>
       <p style="font-size: 13px; color: #666;">提示：一个密码仅限一台设备使用</p>
       <input type="password" id="accessPassword" placeholder="请输入密码..." autofocus>
-      <button onclick="verifyPassword()">确认进入</button>
-      <div id="authErrorMsg" class="auth-error">密码错误或已被其他设备占用！</div>
+      <button id="loginBtn" onclick="verifyPassword()">确认进入</button>
+      <div id="authErrorMsg" class="auth-error"></div>
     </div>
   </div>
 
@@ -246,14 +228,15 @@
   </div>
 
   <script>
-    // -------------------------------------------------------------------------
-    // 🔐 密码与单设备防多开控制逻辑（基于免费云端 API 校验）
-    // -------------------------------------------------------------------------
-    const validPasswords = ["Bds8001", "Bds8002", "Bds8003", "Bds8004", "Bds8005", "Bds8006", "Bds8007", "Bds8008", "Bds8009", "Bds8010", "Bds8011", "Cds8001", "Cds8002", "Cds8003", "Cds8004", "Cds8005", "Cds8006", "Cds8007", "Cds8008", "Cds8009", "Cds8010", "Cds8011", "Dds8001", "Dds8002", "Dds8003", "Dds8004", "Dds8005", "Dds8006","Eds8001", "Eds8002", "Eds8003","Xds8001", "Xds8002", "Tds8000"];
-
-    // 使用免费的 jsonbin.io 存储跨设备绑定状态（开箱即用，无需配置数据库）
-    const BIN_ID = "675f928ee41b4d34e463a56a"; // 内置公共测试存储箱
+    // =========================================================================
+    // 1. 已成功绑定您的 JSONBin 云端授权配置
+    // =========================================================================
+    const BIN_ID = "6afadd49ac6210605a8b842b"; 
+    const MASTER_KEY = "$2a$10$YSUEua/pdNyKyajJ8a3/zO4uAzFTYFo.PKdneP6Kauz551LzzLtVC";
     const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+
+    // 2. 有效密码列表
+    const validPasswords = ["Bds8001", "Bds8002", "Bds8003", "Bds8004", "Bds8005", "Bds8006", "Bds8007", "Bds8008", "Bds8009", "Bds8010", "Bds8011", "Cds8001", "Cds8002", "Cds8003", "Cds8004", "Cds8005", "Cds8006", "Cds8007", "Cds8008", "Cds8009", "Cds8010", "Cds8011", "Dds8001", "Dds8002", "Dds8003", "Dds8004", "Dds8005", "Dds8006","Eds8001", "Eds8002", "Eds8003","Xds8001", "Xds8002", "Tds8000"];
 
     function getDeviceToken() {
       let token = localStorage.getItem('ds_device_token');
@@ -264,7 +247,7 @@
       return token;
     }
 
-    // 页面加载时向云端核对当前设备的登录状态
+    // 页面每次打开时，强制去云端核对当前电脑是否仍拥有该密码的绑定权
     window.addEventListener('DOMContentLoaded', async () => {
       const savedPass = localStorage.getItem('ds_active_password');
       const currentDev = getDeviceToken();
@@ -272,11 +255,20 @@
 
       if (savedPass && validPasswords.includes(savedPass)) {
         try {
-          const res = await fetch(API_URL, { headers: { 'X-Access-Master-Key': '$2a$10$7Q0Z9... (public)' } });
-          // 简化逻辑：如果在本地缓存确认过，允许直接进入，同时后台异步核对
-          overlay.style.display = 'none';
-          return;
-        } catch (e) {}
+          const res = await fetch(`${API_URL}/latest`, {
+            headers: { 'X-Master-Key': MASTER_KEY }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const binds = data.record || {};
+            if (binds[savedPass] === currentDev) {
+              overlay.style.display = 'none';
+              return;
+            }
+          }
+        } catch (e) {
+          console.error("云端校验异常", e);
+        }
       }
       overlay.style.display = 'flex';
     });
@@ -284,7 +276,7 @@
     async function verifyPassword() {
       const inputVal = document.getElementById('accessPassword').value.trim();
       const errorMsg = document.getElementById('authErrorMsg');
-      const btn = document.querySelector('.auth-box button');
+      const btn = document.getElementById('loginBtn');
       const currentDev = getDeviceToken();
 
       if (!validPasswords.includes(inputVal)) {
@@ -294,43 +286,48 @@
       }
 
       btn.disabled = true;
-      btn.innerText = "正在验证授权...";
+      btn.innerText = "正在连接云端核验...";
       errorMsg.style.display = 'none';
 
       try {
-        // 从云端获取当前所有密码的绑定情况
-        const response = await fetch(API_URL + "/latest");
-        const data = await response.json();
-        let binds = data.record || {};
+        const res = await fetch(`${API_URL}/latest`, {
+          headers: { 'X-Master-Key': MASTER_KEY }
+        });
+        
+        if (!res.ok) {
+          throw new Error("云端配置错误或密钥无效");
+        }
 
+        const data = await res.json();
+        let binds = data.record || {};
         let boundDev = binds[inputVal];
 
-        // 如果该密码已经被别的设备绑定了，且不是当前设备
         if (boundDev && boundDev !== currentDev) {
-          errorMsg.innerText = "❌ 该密码已在其他电脑上使用，无法重复登录！";
+          errorMsg.innerText = "❌ 该密码已在其他电脑上使用，严禁共用！";
           errorMsg.style.display = 'block';
           btn.disabled = false;
           btn.innerText = "确认进入";
           return;
         }
 
-        // 绑定当前设备并更新到云端
-        binds[inputVal] = currentDev;
-        await fetch(API_URL, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Access-Master-Key': '$2a$10$7Q0Z9...'
-          },
-          body: JSON.stringify(binds)
-        });
+        if (!boundDev) {
+          binds[inputVal] = currentDev;
+          const updateRes = await fetch(API_URL, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Master-Key': MASTER_KEY
+            },
+            body: JSON.stringify(binds)
+          });
+          if (!updateRes.ok) throw new Error("绑定写入失败");
+        }
 
         localStorage.setItem('ds_active_password', inputVal);
         document.getElementById('auth-overlay').style.display = 'none';
       } catch (e) {
-        // 如果网络异常，退化为本地验证放行，确保不影响正常使用
-        localStorage.setItem('ds_active_password', inputVal);
-        document.getElementById('auth-overlay').style.display = 'none';
+        errorMsg.innerText = "验证失败：" + e.message + "（请检查网络或联系管理员）";
+        errorMsg.style.display = 'block';
       } finally {
         btn.disabled = false;
         btn.innerText = "确认进入";
@@ -338,14 +335,12 @@
     }
 
     document.getElementById('accessPassword').addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') {
-        verifyPassword();
-      }
+      if (e.key === 'Enter') verifyPassword();
     });
 
-    // -------------------------------------------------------------------------
+    // =========================================================================
     // 翻译与工具核心逻辑
-    // -------------------------------------------------------------------------
+    // =========================================================================
     function formatThousand(text) {
       return text.replace(/\b\d+(\.\d+)?\b/g, (match) => {
         const parts = match.split('.');
