@@ -229,7 +229,7 @@
 
   <script>
     // =========================================================================
-    // 1. JSONBin 云端授权配置
+    // 1. JSONBin 云端授权与字数统计配置
     // =========================================================================
     const BIN_ID = "6afadd49ac6210605a8b842b"; 
     const MASTER_KEY = "$2a$10$YSUEua/pdNyKyajJ8a3/zO4uAzFTYFo.PKdneP6Kauz551LzzLtVC";
@@ -239,7 +239,6 @@
     const validPasswords = ["Bds8001", "Bds8002", "Bds8003", "Bds8004", "Bds8005", "Bds8006", "Bds8007", "Bds8008", "Bds8009", "Bds8010", "Bds8011", "Cds8001", "Cds8002", "Cds8003", "Cds8004", "Cds8005", "Cds8006", "Cds8007", "Cds8008", "Cds8009", "Cds8010", "Cds8011", "Dds8001", "Dds8002", "Dds8003", "Dds8004", "Dds8005", "Dds8006","Eds8001", "Eds8002", "Eds8003","Xds8001", "Xds8002", "Tds8000"];
 
     function getDeviceToken() {
-      // 设备固定标识仍存放在 localStorage 中（确保同一台电脑指纹不变）
       let token = localStorage.getItem('ds_device_token');
       if (!token) {
         token = 'dev_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
@@ -248,9 +247,8 @@
       return token;
     }
 
-    // 页面每次加载时：改用 sessionStorage 检查
+    // 页面每次加载时检查授权
     window.addEventListener('DOMContentLoaded', async () => {
-      // 使用 sessionStorage：只要关闭过网页标签，这里就会变成 null，从而强制弹窗
       const savedPass = sessionStorage.getItem('ds_active_password');
       const currentDev = getDeviceToken();
       const overlay = document.getElementById('auth-overlay');
@@ -263,7 +261,8 @@
           if (res.ok) {
             const data = await res.json();
             const binds = data.record || {};
-            if (binds[savedPass] === currentDev) {
+            // 兼容老数据结构检查
+            if (binds[savedPass] === currentDev || (binds[savedPass] && typeof binds[savedPass] === 'string' && binds[savedPass] === currentDev)) {
               overlay.style.display = 'none';
               return;
             }
@@ -301,7 +300,17 @@
         }
 
         const data = await res.json();
-        let binds = data.record || {};
+        let fullData = data.record || {};
+        
+        // 兼容处理：如果 record 里既有设备绑定，也有 stats 统计
+        // 我们约定结构为: { "Bds8001": "dev_xxx", ..., "stats": { "2026-11-16": { "Cds8004": 150 } } }
+        let binds = {};
+        for (let key in fullData) {
+          if (key !== "stats") {
+            binds[key] = fullData[key];
+          }
+        }
+
         let boundDev = binds[inputVal];
 
         if (boundDev && boundDev !== currentDev) {
@@ -313,19 +322,19 @@
         }
 
         if (!boundDev) {
-          binds[inputVal] = currentDev;
+          fullData[inputVal] = currentDev;
           const updateRes = await fetch(API_URL, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
               'X-Master-Key': MASTER_KEY
             },
-            body: JSON.stringify(binds)
+            body: JSON.stringify(fullData)
           });
           if (!updateRes.ok) throw new Error("绑定写入失败");
         }
 
-        // 登录成功：存入 sessionStorage（关闭网页后自动失效）
+        // 登录成功：存入 sessionStorage
         sessionStorage.setItem('ds_active_password', inputVal);
         document.getElementById('auth-overlay').style.display = 'none';
       } catch (e) {
@@ -334,6 +343,45 @@
       } finally {
         btn.disabled = false;
         btn.innerText = "确认进入";
+      }
+    }
+
+    // 新增：自动上报字数统计到 JSONBin 的函数
+    async function reportUsage(charCount) {
+      if (!charCount || charCount <= 0) return;
+      const currentPass = sessionStorage.getItem('ds_active_password');
+      if (!currentPass) return;
+
+      const today = new Date().toISOString().split('T')[0]; // 例如 "2026-11-16"
+
+      try {
+        // 1. 获取最新云端数据
+        const res = await fetch(`${API_URL}/latest`, {
+          headers: { 'X-Master-Key': MASTER_KEY }
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        let fullData = data.record || {};
+
+        // 2. 初始化统计结构
+        if (!fullData.stats) fullData.stats = {};
+        if (!fullData.stats[today]) fullData.stats[today] = {};
+        if (!fullData.stats[today][currentPass]) fullData.stats[today][currentPass] = 0;
+
+        // 3. 累加字数
+        fullData.stats[today][currentPass] += charCount;
+
+        // 4. 写回 JSONBin
+        await fetch(API_URL, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Master-Key': MASTER_KEY
+          },
+          body: JSON.stringify(fullData)
+        });
+      } catch (e) {
+        console.error("字数上报失败:", e);
       }
     }
 
@@ -414,6 +462,10 @@
       }
       
       outputDiv.innerHTML = '实时翻译中...<span id="tooltipLeft" class="custom-tooltip">暂无原文</span>';
+      
+      // 触发字数统计上报（记录本次输入的字符数）
+      reportUsage(text.trim().length);
+
       const finalResult = await translateText(text, sourceLang, targetLang);
       outputDiv.textContent = finalResult;
       const newTooltip = document.createElement('span');
@@ -435,6 +487,10 @@
       }
       
       outputDiv.innerHTML = '实时翻译中...<span id="tooltipRight" class="custom-tooltip">暂无原文</span>';
+      
+      // 触发字数统计上报（记录本次输入的字符数）
+      reportUsage(text.trim().length);
+
       const finalResult = await translateText(text, sourceLang, targetLang);
       outputDiv.textContent = finalResult;
       const newTooltip = document.createElement('span');
