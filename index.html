@@ -471,4 +471,15 @@
       });
     }
 
-    document.getElementById('inputLeft').addEventListener
+    document.getElementById('inputLeft').addEventListener('input', () => {
+      clearTimeout(timerLeft);
+      timerLeft = setTimeout(translateLeftToRight, 400);
+    });
+
+    document.getElementById('inputRight').addEventListener('input', () => {
+      clearTimeout(timerRight);
+      timerRight = setTimeout(translateRightToLeft, 400);
+    });
+  </script>
+</body>
+</html>
