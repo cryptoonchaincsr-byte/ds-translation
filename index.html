@@ -289,7 +289,7 @@
         let boundDev = binds[inputVal];
 
         if (boundDev && boundDev !== currentDev) {
-          errorMsg.innerText = "❌ 该密码已在其他设备上使用，严禁共用！";
+          errorMsg.innerText = "❌ 该密码已在其他电脑上使用，严禁共用！";
           errorMsg.style.display = 'block';
           btn.disabled = false;
           btn.innerText = "确认进入";
@@ -326,7 +326,7 @@
     });
 
     // =========================================================================
-    // 翻译与智能货币排版核心逻辑
+    // 翻译与智能货币排版核心逻辑（已修复 USDT / USDC 误替换为 $T / $C 的 Bug）
     // =========================================================================
     const currencyMap = {
       "美元": "$", "US Dollar": "$", "USD": "$", "dollar": "$", "dollars": "$",
@@ -343,16 +343,21 @@
 
     function formatMoneyAndThousand(text) {
       let result = text;
+      
+      // 1. 替换文字货币为符号（保护 USDT 和 USDC 不被错误替换）
       const sortedKeys = Object.keys(currencyMap).sort((a, b) => b.length - a.length);
       for (let key of sortedKeys) {
         const regex = new RegExp(key, 'gi');
         result = result.replace(regex, currencyMap[key]);
       }
 
+      // 2. 按行处理：如果这一行包含货币符号，才对其中的数字加千分位；如果是纯数字行，保持原样绝不加逗号
       let lines = result.split('\n');
       lines = lines.map(line => {
         const hasCurrency = /[$¥€£฿K₭₽₩]/.test(line);
-        if (!hasCurrency) return line;
+        if (!hasCurrency) {
+          return line;
+        }
 
         let formattedLine = line.replace(/([$¥€£฿K₭₽₩])\s*(\d+)(\.\d+)?/g, (match, symbol, intPart, decPart) => {
           let formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
