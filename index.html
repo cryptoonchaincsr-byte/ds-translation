@@ -237,7 +237,6 @@
 
     const validPasswords = ["Bds8001", "Ht8001", "Bds8002", "Bds8003", "Bds8004", "Bds8005", "Bds8006", "Bds8007", "Bds8008", "Bds8009", "Bds8010", "Bds8011", "Cds8001", "Cds8002", "Cds8003", "Cds8004", "Cds8005", "Cds8006", "Cds8007", "Cds8008", "Cds8009", "Cds8010", "Cds8011", "Dds8001", "Dds8002", "Dds8003", "Dds8004", "Dds8005", "Dds8006","Eds8001", "Eds8002", "Eds8003","Xds8001", "Xds8002", "Tds8001", "Tds8000"];
 
-    // 固定的设备指纹生成函数：确保一旦生成永久不变，防止重复写入扣费
     function getDeviceToken() {
       let token = localStorage.getItem('ds_device_token');
       if (!token) {
@@ -247,7 +246,6 @@
       return token;
     }
 
-    // 页面加载时直接检查本地永久授权记录，零 API 消耗
     window.addEventListener('DOMContentLoaded', () => {
       const savedPass = localStorage.getItem('ds_verified_password');
       const savedToken = localStorage.getItem('ds_verified_token');
@@ -326,7 +324,7 @@
     });
 
     // =========================================================================
-    // 翻译与智能货币排版核心逻辑（已修复 USDT / USDC 误替换为 $T / $C 的 Bug）
+    // 翻译与智能货币排版核心逻辑（绝对隔离 USDT / USDC，防止变成 $T / $C）
     // =========================================================================
     const currencyMap = {
       "美元": "$", "US Dollar": "$", "USD": "$", "dollar": "$", "dollars": "$",
@@ -344,7 +342,12 @@
     function formatMoneyAndThousand(text) {
       let result = text;
       
-      // 1. 替换文字货币为符号（保护 USDT 和 USDC 不被错误替换）
+      // 【关键拦截】如果文本中包含 USDT 或 USDC，直接跳过货币符号替换，防止被误伤变成 $T 或 $C
+      if (/USDT|USDC/i.test(result)) {
+        return result;
+      }
+
+      // 1. 替换文字货币为符号
       const sortedKeys = Object.keys(currencyMap).sort((a, b) => b.length - a.length);
       for (let key of sortedKeys) {
         const regex = new RegExp(key, 'gi');
