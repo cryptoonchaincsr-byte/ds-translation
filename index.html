@@ -372,30 +372,38 @@
     }
 
     // =========================================================================
-    // 终极直连翻译引擎（强制通过标准跨域通道，永不失效）
+    // 终极直连翻译引擎（已修复同语种报错并具备多重备用通道）
     // =========================================================================
     async function translateText(text, sourceLang, targetLang) {
       if (!text.trim()) return "";
 
+      // 智能识别自动检测时的源语言
+      let src = sourceLang;
+      if (src === 'auto') {
+        src = /[\u4e00-\u9fa5]/.test(text) ? 'zh-CN' : 'en';
+      }
+
+      // 如果源语言与目标语言相同，自动将其设为对立语种，防止接口报错
+      if (src === targetLang) {
+        src = (targetLang === 'zh-CN' ? 'en' : 'zh-CN');
+      }
+
+      // 通道 1：MyMemory 翻译 API
       try {
-        // 使用标准内存公共翻译通道
-        let src = sourceLang === 'auto' ? 'autodetect' : sourceLang;
-        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${src === 'autodetect' ? 'en' : src}|${targetLang}`;
-        
+        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${src}|${targetLang}`;
         const res = await fetch(url);
         if (res.ok) {
           const data = await res.json();
           if (data && data.responseData && data.responseData.translatedText) {
             let resText = data.responseData.translatedText;
-            // 如果返回内容包含配额超限提示，则走内置智能直接对换
-            if (!resText.includes("MYMEMORY WARNING")) {
+            if (!resText.includes("DISTINCT LANGUAGES") && !resText.includes("MYMEMORY WARNING")) {
               return formatMoneyAndThousand(resText.trim());
             }
           }
         }
       } catch (e) {}
 
-      // 备用：若主通道繁忙，直接调用稳定备用翻译节点
+      // 通道 2：Google 翻译接口备用节点
       try {
         const url2 = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
         const res2 = await fetch(url2);
