@@ -3,8 +3,7 @@
 <head>
   <link rel="manifest" href="manifest.json">
   <meta charset="UTF-8">
-  <title>DS Translation - 双向实时多语种翻译与货币符号工具</title>
-  <!-- 网页标签栏小图标 -->
+  <title>DS Translation - 安全授权版</title>
   <link rel="icon" href="logo.png" type="image/png">
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; max-width: 1200px; margin: 0 auto; background: #f9f9f9; }
@@ -19,7 +18,6 @@
     .container { display: flex; gap: 20px; flex-wrap: wrap; }
     .panel { flex: 1; min-width: 320px; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
     
-    /* 输入框头部布局（含清空按钮） */
     .input-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
     .clear-btn { background: none; border: none; color: #999; font-size: 13px; cursor: pointer; padding: 2px 6px; border-radius: 4px; transition: all 0.2s; }
     .clear-btn:hover { background: #eee; color: #d9534f; }
@@ -30,15 +28,14 @@
     option { color: #333; padding: 5px; }
     .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; margin-top: 10px; }
     
-    /* 结果框容器：绝对锁死为【纯黑底、纯白字、极细柔和红边】 */
     .result-box { 
       padding: 12px; 
-      background: #000000 !important; /* 纯黑底色 */
+      background: #000000 !important; 
       border: 1px solid #222222 !important;
       border-radius: 4px; 
       min-height: 90px; 
       font-size: 16px; 
-      color: #ffffff !important; /* 纯白文字 */
+      color: #ffffff !important; 
       word-break: break-all; 
       white-space: pre-wrap; 
       cursor: default; 
@@ -46,51 +43,21 @@
       font-weight: bold; 
       text-align: left !important;
       direction: ltr !important;
-      /* 极细、清晰的红色微描边（不结块、不刺眼） */
-      text-shadow: 
-        -0.6px -0.6px 0 #ff1744,  
-         0.6px -0.6px 0 #ff1744,  
-        -0.6px  0.6px 0 #ff1744,  
-         0.6px  0.6px 0 #ff1744 !important;
+      text-shadow: -0.6px -0.6px 0 #ff1744, 0.6px -0.6px 0 #ff1744, -0.6px 0.6px 0 #ff1744, 0.6px 0.6px 0 #ff1744 !important;
     }
     .result-box:hover { background: #111111 !important; }
     
-    /* 自定义悬浮提示卡片样式 */
     .custom-tooltip {
-      visibility: hidden;
-      background-color: #222222;
-      color: #ffffff;
-      text-align: left;
-      border-radius: 6px;
-      padding: 8px 12px;
-      position: absolute;
-      z-index: 10;
-      bottom: 110%;
-      left: 10px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-      font-size: 14px;
-      line-height: 1.4;
-      opacity: 0;
-      transition: opacity 0.2s ease-in-out;
-      max-width: 90%;
-      pointer-events: none;
-      font-weight: bold;
-      white-space: pre-wrap;
-      text-shadow: none;
+      visibility: hidden; background-color: #222222; color: #ffffff; text-align: left; border-radius: 6px;
+      padding: 8px 12px; position: absolute; z-index: 10; bottom: 110%; left: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4); font-size: 14px; line-height: 1.4; opacity: 0;
+      transition: opacity 0.2s ease-in-out; max-width: 90%; pointer-events: none; font-weight: bold;
+      white-space: pre-wrap; text-shadow: none;
     }
     .custom-tooltip::after {
-      content: "";
-      position: absolute;
-      top: 100%;
-      left: 20px;
-      border-width: 6px;
-      border-style: solid;
-      border-color: #222222 transparent transparent transparent;
+      content: ""; position: absolute; top: 100%; left: 20px; border-width: 6px; border-style: solid; border-color: #222222 transparent transparent transparent;
     }
-    .result-box:hover .custom-tooltip {
-      visibility: visible;
-      opacity: 1;
-    }
+    .result-box:hover .custom-tooltip { visibility: visible; opacity: 1; }
 
     .label { font-weight: bold; color: #555; display: inline-block; }
     .btn-group { display: flex; gap: 10px; align-items: center; }
@@ -98,9 +65,40 @@
     .copy-btn:hover { background: #0056b3; }
     .copy-btn.copied { background: #6c757d; }
     .tip { font-size: 12px; color: #28a745; margin-top: 5px; font-weight: bold; }
+
+    /* 🔐 密码登录遮罩层样式 */
+    #auth-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.85); z-index: 9999;
+      display: flex; justify-content: center; align-items: center;
+    }
+    .auth-box {
+      background: #fff; padding: 30px; border-radius: 12px; width: 350px; text-align: center;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+    .auth-box h3 { margin-top: 0; color: #333; }
+    .auth-box input {
+      width: 100%; padding: 10px; margin: 15px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 15px;
+    }
+    .auth-box button {
+      width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer;
+    }
+    .auth-box button:hover { background: #0056b3; }
+    .auth-error { color: #d9534f; font-size: 13px; margin-top: 10px; display: none; }
   </style>
 </head>
 <body>
+
+  <!-- 🔐 密码验证弹窗遮罩 -->
+  <div id="auth-overlay">
+    <div class="auth-box">
+      <h3>🔒 请输入您的专属使用密码</h3>
+      <p style="font-size: 13px; color: #666;">提示：一个密码仅限一台设备使用</p>
+      <input type="password" id="accessPassword" placeholder="请输入密码...">
+      <button onclick="verifyPassword()">确认进入</button>
+      <div id="authErrorMsg" class="auth-error">密码错误或已被其他设备占用！</div>
+    </div>
+  </div>
 
   <!-- 顶部 Logo 与标题展示 -->
   <div class="header-box">
@@ -118,7 +116,7 @@
         <span class="label">🇨🇳 🇲🇲 🇱🇦 🇹🇭 输入主要语言文本：</span>
         <button class="clear-btn" onclick="clearContent('inputLeft', 'outputLeft', 'tooltipLeft')">✕ 清空</button>
       </div>
-      <textarea id="inputLeft" placeholder="在此输入带数字和货币的文本（如：价格1234567美元）..."></textarea>
+      <textarea id="inputLeft" placeholder="在此输入带数字和货币的文本..."></textarea>
       <div class="tip">⚡ 已开启实时翻译 + 千分位格式化 + 货币符号转换</div>
       
       <div style="margin-top: 10px;">
@@ -248,9 +246,79 @@
   </div>
 
   <script>
-    // 1. 数字千分位格式化函数（例如：1234567 ➔ 1,234,567）
+    // -------------------------------------------------------------------------
+    // 🔐 密码与单设备防多开控制逻辑
+    // -------------------------------------------------------------------------
+    // 有效密码列表（您可以自由修改和增减密码）
+    const validPasswords = ["Bds8001", "Bds8002", "Bds8003", "Bds8004", "Bds8005", "Bds8006", "Bds8007", "Bds8008", "Bds8009", "Bds8010", "Bds8011", "Cds8001", "Cds8002", "Cds8003", "Cds8004", "Cds8005", "Cds8006", "Cds8007", "Cds8008", "Cds8009", "Cds8010", "Cds8011", "Dds8001", "Dds8002", "Dds8003", "Dds8004", "Dds8005", "Dds8006","Eds8001", "Eds8002", "Eds8003","Xds8001", "Xds8002", "Tds8000"];
+
+    // 生成或获取当前浏览器的唯一设备指纹 ID
+    function getDeviceToken() {
+      let token = localStorage.getItem('ds_device_token');
+      if (!token) {
+        token = 'dev_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
+        localStorage.setItem('ds_device_token', token);
+      }
+      return token;
+    }
+
+    // 页面加载时检查是否已经登录过
+    window.addEventListener('DOMContentLoaded', () => {
+      const savedPass = localStorage.getItem('ds_active_password');
+      const currentDev = getDeviceToken();
+      
+      if (savedPass && validPasswords.includes(savedPass)) {
+        // 检查该密码当前绑定的设备
+        const boundDev = localStorage.getItem('ds_bind_' + savedPass);
+        if (!boundDev || boundDev === currentDev) {
+          // 验证通过，隐藏登录框
+          document.getElementById('auth-overlay').style.display = 'none';
+        } else {
+          // 被其他设备抢登了，清除状态
+          localStorage.removeItem('ds_active_password');
+        }
+      }
+    });
+
+    // 验证密码提交函数
+    function verifyPassword() {
+      const inputVal = document.getElementById('accessPassword').value.trim();
+      const errorMsg = document.getElementById('authErrorMsg');
+      const currentDev = getDeviceToken();
+
+      if (!validPasswords.includes(inputVal)) {
+        errorMsg.innerText = "密码错误，请重新输入！";
+        errorMsg.style.display = 'block';
+        return;
+      }
+
+      // 检查该密码是否被其他设备占用
+      const boundDevKey = 'ds_bind_' + inputVal;
+      const boundDev = localStorage.getItem(boundDevKey);
+
+      if (boundDev && boundDev !== currentDev) {
+        errorMsg.innerText = "该密码已在其他设备上使用，无法重复登录！";
+        errorMsg.style.display = 'block';
+        return;
+      }
+
+      // 绑定当前设备并放行
+      localStorage.setItem(boundDevKey, currentDev);
+      localStorage.setItem('ds_active_password', inputVal);
+      document.getElementById('auth-overlay').style.display = 'none';
+    }
+
+    // 回车直接登录
+    document.getElementById('accessPassword').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        verifyPassword();
+      }
+    });
+
+    // -------------------------------------------------------------------------
+    // 翻译与工具核心逻辑
+    // -------------------------------------------------------------------------
     function formatThousand(text) {
-      // 匹配文本中的独立数字（支持整数和小数）
       return text.replace(/\b\d+(\.\d+)?\b/g, (match) => {
         const parts = match.split('.');
         parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -258,44 +326,29 @@
       });
     }
 
-    // 2. 智能货币名称转符号映射表
     const currencyMap = {
-      // 美元
       "美元": "$", "US Dollar": "$", "USD": "$", "dollar": "$", "dollars": "$",
-      // 人民币
       "人民币": "¥", "CNY": "¥", "RMB": "¥", "Chinese Yuan": "¥",
-      // 欧元
       "欧元": "€", "EUR": "€", "Euro": "€", "Euros": "€",
-      // 英镑
       "英镑": "£", "GBP": "£", "British Pound": "£", "Pound": "£",
-      // 日元 / 人民币符号通用
       "日元": "¥", "JPY": "¥", "Yen": "¥",
-      // 泰铢
       "泰铢": "฿", "THB": "฿", "Baht": "฿",
-      // 缅甸元
       "缅甸元": "K", "MMK": "K", "Kyat": "K",
-      // 老挝基普
       "老挝基普": "₭", "LAK": "₭", "Kip": "₭",
-      // 俄罗斯卢布
       "卢布": "₽", "RUB": "₽", "Ruble": "₽",
-      // 韩元
       "韩元": "₩", "KRW": "₩", "Won": "₩"
     };
 
-    // 3. 智能替换货币名称为符号
     function replaceCurrencySymbols(text) {
       let result = text;
-      // 按词汇长度降序排列，避免短词优先误伤（如先匹配长词）
       const sortedKeys = Object.keys(currencyMap).sort((a, b) => b.length - a.length);
       for (let key of sortedKeys) {
-        // 使用不区分大小写的全局正则匹配货币名称
         const regex = new RegExp(key, 'gi');
         result = result.replace(regex, currencyMap[key]);
       }
       return result;
     }
 
-    // 4. 核心翻译与处理函数
     function translateText(text, sourceLang, targetLang) {
       return (async () => {
         if (!text.trim()) return "";
@@ -310,13 +363,8 @@
             });
           }
           let finalResult = translatedText.trim() || text;
-
-          // 后处理：自动应用千分位数字格式化
           finalResult = formatThousand(finalResult);
-
-          // 后处理：自动将货币名称转换为符号
           finalResult = replaceCurrencySymbols(finalResult);
-
           return finalResult;
         } catch (e) {
           let fallback = formatThousand(text);
@@ -340,9 +388,7 @@
       }
       
       outputDiv.innerHTML = '实时翻译中...<span id="tooltipLeft" class="custom-tooltip">暂无原文</span>';
-
       const finalResult = await translateText(text, sourceLang, targetLang);
-      
       outputDiv.textContent = finalResult;
       const newTooltip = document.createElement('span');
       newTooltip.id = 'tooltipLeft';
@@ -363,9 +409,7 @@
       }
       
       outputDiv.innerHTML = '实时翻译中...<span id="tooltipRight" class="custom-tooltip">暂无原文</span>';
-
       const finalResult = await translateText(text, sourceLang, targetLang);
-      
       outputDiv.textContent = finalResult;
       const newTooltip = document.createElement('span');
       newTooltip.id = 'tooltipRight';
@@ -386,12 +430,9 @@
       const tip = clone.querySelector('.custom-tooltip');
       if (tip) tip.remove();
       const outputText = clone.textContent ? clone.textContent.trim() : "";
-      
       const copyBtn = document.getElementById(btnId);
 
-      if (!outputText || outputText.includes("等待输入") || outputText.includes("实时翻译中") || outputText.includes("异常") || outputText.includes("失败")) {
-        return;
-      }
+      if (!outputText || outputText.includes("等待输入") || outputText.includes("实时翻译中")) return;
 
       navigator.clipboard.writeText(outputText).then(() => {
         copyBtn.innerText = "已复制！";
@@ -403,13 +444,11 @@
       });
     }
 
-    // 绑定左侧输入框监听事件
     document.getElementById('inputLeft').addEventListener('input', () => {
       clearTimeout(timerLeft);
       timerLeft = setTimeout(translateLeftToRight, 400);
     });
 
-    // 绑定右侧输入框监听事件
     document.getElementById('inputRight').addEventListener('input', () => {
       clearTimeout(timerRight);
       timerRight = setTimeout(translateRightToLeft, 400);
