@@ -235,7 +235,6 @@
     const MASTER_KEY = "$2a$10$YSUEua/pdNyKyajJ8a3/zO4uAzFTYFo.PKdneP6Kauz551LzzLtVC";
     const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
-    // 2. 有效密码列表
     const validPasswords = ["Bds8001", "Bds8002", "Bds8003", "Bds8004", "Bds8005", "Bds8006", "Bds8007", "Bds8008", "Bds8009", "Bds8010", "Bds8011", "Cds8001", "Cds8002", "Cds8003", "Cds8004", "Cds8005", "Cds8006", "Cds8007", "Cds8008", "Cds8009", "Cds8010", "Cds8011", "Dds8001", "Dds8002", "Dds8003", "Dds8004", "Dds8005", "Dds8006","Eds8001", "Eds8002", "Eds8003","Xds8001", "Xds8002", "Tds8000"];
 
     function getDeviceToken() {
@@ -247,7 +246,6 @@
       return token;
     }
 
-    // 页面每次加载时检查授权
     window.addEventListener('DOMContentLoaded', async () => {
       const savedPass = sessionStorage.getItem('ds_active_password');
       const currentDev = getDeviceToken();
@@ -339,10 +337,8 @@
     });
 
     // =========================================================================
-    // 翻译与工具核心逻辑
+    // 翻译与智能货币排版核心逻辑（纯数字绝对不加千分位）
     // =========================================================================
-    
-    // 货币映射表
     const currencyMap = {
       "美元": "$", "US Dollar": "$", "USD": "$", "dollar": "$", "dollars": "$",
       "人民币": "¥", "CNY": "¥", "RMB": "¥", "Chinese Yuan": "¥",
@@ -356,32 +352,40 @@
       "韩元": "₩", "KRW": "₩", "Won": "₩"
     };
 
-    // 只有在检测到带有货币或被转换为符号后，才对旁边的数字加千分位并排版
     function formatMoneyAndThousand(text) {
       let result = text;
       
-      // 1. 先把文字货币名称替换成符号
+      // 1. 替换文字货币为符号
       const sortedKeys = Object.keys(currencyMap).sort((a, b) => b.length - a.length);
       for (let key of sortedKeys) {
         const regex = new RegExp(key, 'gi');
         result = result.replace(regex, currencyMap[key]);
       }
 
-      // 2. 识别带有货币符号（如 $, ¥, €, £, ฿, K, ₭, ₽, ₩ 等）旁边的数字，对其进行千分位格式化
-      // 支持符号在数字前面（如 $1520）或后面（如 1520$）
-      const currencySymbolsRegex = /([$¥€£฿K₭₽₩])\s*(\d+)(\.\d+)?/g;
-      result = result.replace(currencySymbolsRegex, (match, symbol, intPart, decPart) => {
-        let formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-        return symbol + formattedInt + (decPart || '');
+      // 2. 按行处理：如果这一行包含货币符号，才对其中的数字加千分位；如果是纯数字行，保持原样绝不加逗号
+      let lines = result.split('\n');
+      lines = lines.map(line => {
+        // 检查当前行是否含有货币符号
+        const hasCurrency = /[$¥€£฿K₭₽₩]/.test(line);
+        if (!hasCurrency) {
+          return line; // 纯数字或普通文本行，直接返回，不加千分位
+        }
+
+        // 包含货币符号的行，精准匹配其旁边的数字并加上千分位
+        let formattedLine = line.replace(/([$¥€£฿K₭₽₩])\s*(\d+)(\.\d+)?/g, (match, symbol, intPart, decPart) => {
+          let formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+          return symbol + formattedInt + (decPart || '');
+        });
+
+        formattedLine = formattedLine.replace(/(\d+)(\.\d+)?\s*([$¥€£฿K₭₽₩])/g, (match, intPart, decPart, symbol) => {
+          let formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+          return formattedInt + (decPart || '') + symbol;
+        });
+
+        return formattedLine;
       });
 
-      const currencySymbolsAfterRegex = /(\d+)(\.\d+)?\s*([$¥€£฿K₭₽₩])/g;
-      result = result.replace(currencySymbolsAfterRegex, (match, intPart, decPart, symbol) => {
-        let formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-        return formattedInt + (decPart || '') + symbol;
-      });
-
-      return result;
+      return lines.join('\n');
     }
 
     function translateText(text, sourceLang, targetLang) {
@@ -398,7 +402,6 @@
             });
           }
           let finalResult = translatedText.trim() || text;
-          // 调用优化后的格式化函数：纯数字保持不变，带货币的数字才加千分位和符号
           finalResult = formatMoneyAndThousand(finalResult);
           return finalResult;
         } catch (e) {
