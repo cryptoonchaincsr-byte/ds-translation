@@ -324,7 +324,7 @@
     });
 
     // =========================================================================
-    // 翻译与智能货币排版核心逻辑（绝对隔离 USDT / USDC，防止变成 $T / $C）
+    // 翻译与智能货币排版核心逻辑
     // =========================================================================
     const currencyMap = {
       "美元": "$", "US Dollar": "$", "USD": "$", "dollar": "$", "dollars": "$",
@@ -342,19 +342,16 @@
     function formatMoneyAndThousand(text) {
       let result = text;
       
-      // 【关键拦截】如果文本中包含 USDT 或 USDC，直接跳过货币符号替换，防止被误伤变成 $T 或 $C
       if (/USDT|USDC/i.test(result)) {
         return result;
       }
 
-      // 1. 替换文字货币为符号
       const sortedKeys = Object.keys(currencyMap).sort((a, b) => b.length - a.length);
       for (let key of sortedKeys) {
         const regex = new RegExp(key, 'gi');
         result = result.replace(regex, currencyMap[key]);
       }
 
-      // 2. 按行处理：如果这一行包含货币符号，才对其中的数字加千分位；如果是纯数字行，保持原样绝不加逗号
       let lines = result.split('\n');
       lines = lines.map(line => {
         const hasCurrency = /[$¥€£฿K₭₽₩]/.test(line);
@@ -465,14 +462,19 @@
       });
     }
 
+    // 【核心修复】：确保输入时正确触发防抖和翻译
     document.getElementById('inputLeft').addEventListener('input', () => {
       clearTimeout(timerLeft);
-      timerLeft = setTimeout(translateLeftToRight, 400);
+      timerLeft = setTimeout(() => {
+        translateLeftToRight();
+      }, 400);
     });
 
     document.getElementById('inputRight').addEventListener('input', () => {
       clearTimeout(timerRight);
-      timerRight = setTimeout(translateRightToLeft, 400);
+      timerRight = setTimeout(() => {
+        translateRightToLeft();
+      }, 400);
     });
   </script>
 </body>
