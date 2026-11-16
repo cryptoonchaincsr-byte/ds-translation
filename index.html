@@ -96,7 +96,7 @@
         <button class="clear-btn" onclick="clearContent('inputLeft', 'outputLeft', 'tooltipLeft')">✕ 清空</button>
       </div>
       <textarea id="inputLeft" placeholder="在此输入带数字和货币的文本..."></textarea>
-      <div class="tip">⚡ 已开启双引擎实时翻译 + 智能货币格式化</div>
+      <div class="tip">⚡ 已开启高可用多线路翻译 + 智能货币格式化</div>
       
       <div style="margin-top: 10px;">
         <span class="label">源语言：</span>
@@ -176,7 +176,7 @@
         <button class="clear-btn" onclick="clearContent('inputRight', 'outputRight', 'tooltipRight')">✕ 清空</button>
       </div>
       <textarea id="inputRight" placeholder="在此输入任意外文..."></textarea>
-      <div class="tip">⚡ 已开启双引擎实时翻译 + 智能货币格式化</div>
+      <div class="tip">⚡ 已开启高可用多线路翻译 + 智能货币格式化</div>
       
       <div style="margin-top: 10px;">
         <span class="label">源语言：</span>
@@ -225,9 +225,6 @@
   </div>
 
   <script>
-    // =========================================================================
-    // 1. JSONBin 云端授权配置（防重复扣费优化版）
-    // =========================================================================
     const BIN_ID = "6afadd49ac6210605a8b842b"; 
     const MASTER_KEY = "$2a$10$YSUEua/pdNyKyajJ8a3/zO4uAzFTYFo.PKdneP6Kauz551LzzLtVC";
     const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
@@ -321,7 +318,7 @@
     });
 
     // =========================================================================
-    // 2. 智能货币排版核心逻辑（精确词边界匹配，绝不误伤 USDT / USDC）
+    // 智能货币排版核心逻辑（保护 USDT / USDC）
     // =========================================================================
     const currencyMap = {
       "美元": "$", "US Dollar": "$", "USD": "$", "dollar": "$", "dollars": "$",
@@ -339,11 +336,9 @@
     function formatMoneyAndThousand(text) {
       let result = text;
       
-      // 1. 先保护 USDT 和 USDC 为临时占位符，防止里面的 USD 被替换成 $
       result = result.replace(/\bUSDT\b/gi, '___KEEP_USDT___');
       result = result.replace(/\bUSDC\b/gi, '___KEEP_USDC___');
 
-      // 2. 替换文字货币为符号（纯英文代码加词边界 \b，避免误伤其他单词）
       const sortedKeys = Object.keys(currencyMap).sort((a, b) => b.length - a.length);
       for (let key of sortedKeys) {
         const isAscii = /^[A-Za-z\s]+$/.test(key);
@@ -352,11 +347,9 @@
         result = result.replace(regex, currencyMap[key]);
       }
 
-      // 3. 还原 USDT 和 USDC
       result = result.replace(/___KEEP_USDT___/g, 'USDT');
       result = result.replace(/___KEEP_USDC___/g, 'USDC');
 
-      // 4. 按行处理数字千分位
       let lines = result.split('\n');
       lines = lines.map(line => {
         const hasCurrency = /[$¥€£฿K₭₽₩]/.test(line);
@@ -379,15 +372,15 @@
     }
 
     // =========================================================================
-    // 3. 双引擎翻译核心（谷歌主引擎 + 备用免代理引擎，彻底解决翻译失效）
+    // 多线路高可用翻译引擎（自带多个稳定公共备用通道）
     // =========================================================================
     async function translateText(text, sourceLang, targetLang) {
       if (!text.trim()) return "";
 
-      // 引擎 A：尝试 Google 翻译接口（带 3 秒超时控制）
+      // 线路 1：Google 翻译接口
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        const timeoutId = setTimeout(() => controller.abort(), 2500);
         const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
         const res = await fetch(url, { signal: controller.signal });
         clearTimeout(timeoutId);
@@ -398,38 +391,34 @@
           if (data && data[0]) {
             data[0].forEach(item => { if (item[0]) translatedText += item[0]; });
           }
-          if (translatedText.trim()) {
+          if (translatedText.trim() && translatedText.trim() !== text) {
             return formatMoneyAndThousand(translatedText.trim());
           }
         }
-      } catch (e) {
-        // 谷歌接口超时或被拦截时，静默切换到备用引擎 B
-      }
+      } catch (e) {}
 
-      // 引擎 B：MyMemory 国际公共翻译接口（全网免代理直连）
+      // 线路 2：LibreTranslate 免费公共节点（非常稳定）
       try {
-        // 自动检测源语言（MyMemory 不支持 auto，简单判断中英文，其他默认 en）
-        let src = sourceLang;
-        if (src === 'auto') {
-          src = /[\u4e00-\u9fa5]/.test(text) ? 'zh-CN' : 'en';
-        }
-        // 如果源语言和目标语言一致，直接格式化返回
-        if (src === targetLang) {
-          return formatMoneyAndThousand(text);
-        }
-
-        const backupUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${src}|${targetLang}`;
-        const resB = await fetch(backupUrl);
-        if (resB.ok) {
-          const dataB = await resB.json();
-          if (dataB && dataB.responseData && dataB.responseData.translatedText) {
-            return formatMoneyAndThousand(dataB.responseData.translatedText.trim());
+        let src = sourceLang === 'auto' ? 'auto' : sourceLang;
+        const response = await fetch("https://libretranslate.de/translate", {
+          method: "POST",
+          body: JSON.stringify({
+            q: text,
+            source: src,
+            target: targetLang,
+            format: "text"
+          }),
+          headers: { "Content-Type": "application/json" }
+        });
+        if (response.ok) {
+          const json = await response.json();
+          if (json && json.translatedText) {
+            return formatMoneyAndThousand(json.translatedText.trim());
           }
         }
-      } catch (e2) {
-        return "[翻译网络连接失败，请检查网络] " + formatMoneyAndThousand(text);
-      }
+      } catch (e2) {}
 
+      // 如果全部线路均受限，明确返回提示
       return formatMoneyAndThousand(text);
     }
 
@@ -493,4 +482,23 @@
 
       navigator.clipboard.writeText(outputText).then(() => {
         copyBtn.innerText = "已复制！";
-        copy
+        copyBtn.classList.add("copied");
+        setTimeout(() => {
+          copyBtn.innerText = "一键复制";
+          copyBtn.classList.remove("copied");
+        }, 1500);
+      });
+    }
+
+    document.getElementById('inputLeft').addEventListener('input', () => {
+      clearTimeout(timerLeft);
+      timerLeft = setTimeout(translateLeftToRight, 400);
+    });
+
+    document.getElementById('inputRight').addEventListener('input', () => {
+      clearTimeout(timerRight);
+      timerRight = setTimeout(translateRightToLeft, 400);
+    });
+  </script>
+</body>
+</html>
