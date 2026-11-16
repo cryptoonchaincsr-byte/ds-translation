@@ -163,7 +163,7 @@
       <div class="result-header">
         <span class="label">目标语种翻译结果（完美对齐）：</span>
         <div class="btn-group">
-          <button id="copyLeftBtn" class="copy-btn" onclick="copyText('outputLeft', 'copyLeftBtn')">一键复制</button>
+          <button id="copyLeftBtn" class="copy-btn" onclick="copyText('inputLeft', 'outputLeft', 'copyLeftBtn')">一键复制</button>
         </div>
       </div>
       <div id="outputLeft" class="result-box">
@@ -217,7 +217,7 @@
       <div class="result-header">
         <span class="label">目标语种翻译结果（完美对齐）：</span>
         <div class="btn-group">
-          <button id="copyRightBtn" class="copy-btn" onclick="copyText('outputRight', 'copyRightBtn')">一键复制</button>
+          <button id="copyRightBtn" class="copy-btn" onclick="copyText('inputRight', 'outputRight', 'copyRightBtn')">一键复制</button>
         </div>
       </div>
       <div id="outputRight" class="result-box">
@@ -236,7 +236,11 @@
     const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
     // 2. 有效密码列表
-    const validPasswords = ["Bds8001", "Bds8002", "Ht8001","Bds8003", "Bds8004", "Bds8005", "Bds8006", "Bds8007", "Bds8008", "Bds8009", "Bds8010", "Bds8011", "Cds8001", "Cds8002", "Cds8003", "Cds8004", "Cds8005", "Cds8006", "Cds8007", "Cds8008", "Cds8009", "Cds8010", "Cds8011", "Dds8001", "Dds8002", "Dds8003", "Dds8004", "Dds8005", "Dds8006","Eds8001", "Eds8002", "Eds8003","Xds8001", "Xds8002", "Tds8000"];
+    const validPasswords = ["Bds8001", "Bds8002", "Bds8003", "Bds8004", "Bds8005", "Bds8006", "Bds8007", "Bds8008", "Bds8009", "Bds8010", "Bds8011", "Cds8001", "Cds8002", "Cds8003", "Cds8004", "Cds8005", "Cds8006", "Cds8007", "Cds8008", "Cds8009", "Cds8010", "Cds8011", "Dds8001", "Dds8002", "Dds8003", "Dds8004", "Dds8005", "Dds8006","Eds8001", "Eds8002", "Eds8003","Xds8001", "Xds8002", "Tds8000"];
+
+    // 记录上次已上报过的文本，避免用户连续点多次复制造成重复统计
+    let lastReportedLeft = "";
+    let lastReportedRight = "";
 
     function getDeviceToken() {
       let token = localStorage.getItem('ds_device_token');
@@ -261,8 +265,7 @@
           if (res.ok) {
             const data = await res.json();
             const binds = data.record || {};
-            // 兼容老数据结构检查
-            if (binds[savedPass] === currentDev || (binds[savedPass] && typeof binds[savedPass] === 'string' && binds[savedPass] === currentDev)) {
+            if (binds[savedPass] === currentDev) {
               overlay.style.display = 'none';
               return;
             }
@@ -301,17 +304,7 @@
 
         const data = await res.json();
         let fullData = data.record || {};
-        
-        // 兼容处理：如果 record 里既有设备绑定，也有 stats 统计
-        // 我们约定结构为: { "Bds8001": "dev_xxx", ..., "stats": { "2026-11-16": { "Cds8004": 150 } } }
-        let binds = {};
-        for (let key in fullData) {
-          if (key !== "stats") {
-            binds[key] = fullData[key];
-          }
-        }
-
-        let boundDev = binds[inputVal];
+        let boundDev = fullData[inputVal];
 
         if (boundDev && boundDev !== currentDev) {
           errorMsg.innerText = "❌ 该密码已在其他电脑上使用，严禁共用！";
@@ -334,7 +327,6 @@
           if (!updateRes.ok) throw new Error("绑定写入失败");
         }
 
-        // 登录成功：存入 sessionStorage
         sessionStorage.setItem('ds_active_password', inputVal);
         document.getElementById('auth-overlay').style.display = 'none';
       } catch (e) {
@@ -346,16 +338,15 @@
       }
     }
 
-    // 新增：自动上报字数统计到 JSONBin 的函数
+    // 上报字数统计到 JSONBin（仅在点击复制按钮时触发）
     async function reportUsage(charCount) {
       if (!charCount || charCount <= 0) return;
       const currentPass = sessionStorage.getItem('ds_active_password');
       if (!currentPass) return;
 
-      const today = new Date().toISOString().split('T')[0]; // 例如 "2026-11-16"
+      const today = new Date().toISOString().split('T')[0];
 
       try {
-        // 1. 获取最新云端数据
         const res = await fetch(`${API_URL}/latest`, {
           headers: { 'X-Master-Key': MASTER_KEY }
         });
@@ -363,15 +354,12 @@
         const data = await res.json();
         let fullData = data.record || {};
 
-        // 2. 初始化统计结构
         if (!fullData.stats) fullData.stats = {};
         if (!fullData.stats[today]) fullData.stats[today] = {};
         if (!fullData.stats[today][currentPass]) fullData.stats[today][currentPass] = 0;
 
-        // 3. 累加字数
         fullData.stats[today][currentPass] += charCount;
 
-        // 4. 写回 JSONBin
         await fetch(API_URL, {
           method: 'PUT',
           headers: {
@@ -462,10 +450,6 @@
       }
       
       outputDiv.innerHTML = '实时翻译中...<span id="tooltipLeft" class="custom-tooltip">暂无原文</span>';
-      
-      // 触发字数统计上报（记录本次输入的字符数）
-      reportUsage(text.trim().length);
-
       const finalResult = await translateText(text, sourceLang, targetLang);
       outputDiv.textContent = finalResult;
       const newTooltip = document.createElement('span');
@@ -487,10 +471,6 @@
       }
       
       outputDiv.innerHTML = '实时翻译中...<span id="tooltipRight" class="custom-tooltip">暂无原文</span>';
-      
-      // 触发字数统计上报（记录本次输入的字符数）
-      reportUsage(text.trim().length);
-
       const finalResult = await translateText(text, sourceLang, targetLang);
       outputDiv.textContent = finalResult;
       const newTooltip = document.createElement('span');
@@ -504,9 +484,12 @@
       document.getElementById(inputId).value = "";
       const outputDiv = document.getElementById(outputId);
       outputDiv.innerHTML = '等待输入...<span id="' + tooltipId + '" class="custom-tooltip">暂无原文</span>';
+      if (inputId === 'inputLeft') lastReportedLeft = "";
+      if (inputId === 'inputRight') lastReportedRight = "";
     }
 
-    function copyText(outputId, btnId) {
+    function copyText(inputId, outputId, btnId) {
+      const inputText = document.getElementById(inputId).value.trim();
       const outputDiv = document.getElementById(outputId);
       const clone = outputDiv.cloneNode(true);
       const tip = clone.querySelector('.custom-tooltip');
@@ -515,6 +498,15 @@
       const copyBtn = document.getElementById(btnId);
 
       if (!outputText || outputText.includes("等待输入") || outputText.includes("实时翻译中")) return;
+
+      // 触发字数统计上报（防止同一段内容反复点击复制重复计算）
+      if (inputId === 'inputLeft' && inputText !== lastReportedLeft) {
+        lastReportedLeft = inputText;
+        reportUsage(inputText.length);
+      } else if (inputId === 'inputRight' && inputText !== lastReportedRight) {
+        lastReportedRight = inputText;
+        reportUsage(inputText.length);
+      }
 
       navigator.clipboard.writeText(outputText).then(() => {
         copyBtn.innerText = "已复制！";
