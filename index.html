@@ -229,7 +229,7 @@
 
   <script>
     // =========================================================================
-    // 1. JSONBin 云端授权配置（整台电脑终身仅验证一次，0 额外额度消耗）
+    // 1. JSONBin 云端授权配置（防重复扣费优化版）
     // =========================================================================
     const BIN_ID = "6afadd49ac6210605a8b842b"; 
     const MASTER_KEY = "$2a$10$YSUEua/pdNyKyajJ8a3/zO4uAzFTYFo.PKdneP6Kauz551LzzLtVC";
@@ -237,16 +237,17 @@
 
     const validPasswords = ["Bds8001", "Ht8001", "Bds8002", "Bds8003", "Bds8004", "Bds8005", "Bds8006", "Bds8007", "Bds8008", "Bds8009", "Bds8010", "Bds8011", "Cds8001", "Cds8002", "Cds8003", "Cds8004", "Cds8005", "Cds8006", "Cds8007", "Cds8008", "Cds8009", "Cds8010", "Cds8011", "Dds8001", "Dds8002", "Dds8003", "Dds8004", "Dds8005", "Dds8006","Eds8001", "Eds8002", "Eds8003","Xds8001", "Xds8002", "Tds8001", "Tds8000"];
 
+    // 固定的设备指纹生成函数：确保一旦生成永久不变，防止重复写入扣费
     function getDeviceToken() {
       let token = localStorage.getItem('ds_device_token');
       if (!token) {
-        token = 'dev_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
+        token = 'dev_' + navigator.hardwareConcurrency + '_' + (screen.width * screen.height) + '_' + Math.random().toString(36).substring(2, 9);
         localStorage.setItem('ds_device_token', token);
       }
       return token;
     }
 
-    // 页面加载时直接检查本地永久授权记录，无需每次联网消耗额度
+    // 页面加载时直接检查本地永久授权记录，零 API 消耗
     window.addEventListener('DOMContentLoaded', () => {
       const savedPass = localStorage.getItem('ds_verified_password');
       const savedToken = localStorage.getItem('ds_verified_token');
@@ -281,16 +282,14 @@
           headers: { 'X-Master-Key': MASTER_KEY }
         });
         
-        if (!res.ok) {
-          throw new Error("云端配置错误或密钥无效");
-        }
+        if (!res.ok) throw new Error("云端配置错误或密钥无效");
 
         const data = await res.json();
         let binds = data.record || {};
         let boundDev = binds[inputVal];
 
         if (boundDev && boundDev !== currentDev) {
-          errorMsg.innerText = "❌ 该密码已在其他电脑上使用，严禁共用！";
+          errorMsg.innerText = "❌ 该密码已在其他设备上使用，严禁共用！";
           errorMsg.style.display = 'block';
           btn.disabled = false;
           btn.innerText = "确认进入";
@@ -310,12 +309,11 @@
           if (!updateRes.ok) throw new Error("绑定写入失败");
         }
 
-        // 将授权信息永久写入本地存储，以后重启软件不再消耗 JSONBin 额度
         localStorage.setItem('ds_verified_password', inputVal);
         localStorage.setItem('ds_verified_token', currentDev);
         document.getElementById('auth-overlay').style.display = 'none';
       } catch (e) {
-        errorMsg.innerText = "验证失败：" + e.message + "（请检查网络或联系管理员）";
+        errorMsg.innerText = "验证失败：" + e.message + "（请检查网络）";
         errorMsg.style.display = 'block';
       } finally {
         btn.disabled = false;
@@ -328,7 +326,7 @@
     });
 
     // =========================================================================
-    // 翻译与智能货币排版核心逻辑（纯数字绝对不加千分位）
+    // 翻译与智能货币排版核心逻辑
     // =========================================================================
     const currencyMap = {
       "美元": "$", "US Dollar": "$", "USD": "$", "dollar": "$", "dollars": "$",
@@ -345,21 +343,16 @@
 
     function formatMoneyAndThousand(text) {
       let result = text;
-      
-      // 1. 替换文字货币为符号
       const sortedKeys = Object.keys(currencyMap).sort((a, b) => b.length - a.length);
       for (let key of sortedKeys) {
         const regex = new RegExp(key, 'gi');
         result = result.replace(regex, currencyMap[key]);
       }
 
-      // 2. 按行处理：如果这一行包含货币符号，才对其中的数字加千分位；如果是纯数字行，保持原样绝不加逗号
       let lines = result.split('\n');
       lines = lines.map(line => {
         const hasCurrency = /[$¥€£฿K₭₽₩]/.test(line);
-        if (!hasCurrency) {
-          return line;
-        }
+        if (!hasCurrency) return line;
 
         let formattedLine = line.replace(/([$¥€£฿K₭₽₩])\s*(\d+)(\.\d+)?/g, (match, symbol, intPart, decPart) => {
           let formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -386,16 +379,12 @@
           const data = await res.json();
           let translatedText = "";
           if (data && data[0]) {
-            data[0].forEach(item => {
-              if (item[0]) translatedText += item[0];
-            });
+            data[0].forEach(item => { if (item[0]) translatedText += item[0]; });
           }
           let finalResult = translatedText.trim() || text;
-          finalResult = formatMoneyAndThousand(finalResult);
-          return finalResult;
+          return formatMoneyAndThousand(finalResult);
         } catch (e) {
-          let fallback = formatMoneyAndThousand(text);
-          return fallback;
+          return formatMoneyAndThousand(text);
         }
       })();
     }
@@ -413,7 +402,6 @@
         outputDiv.innerHTML = '等待输入...<span id="tooltipLeft" class="custom-tooltip">暂无原文</span>';
         return;
       }
-      
       outputDiv.innerHTML = '实时翻译中...<span id="tooltipLeft" class="custom-tooltip">暂无原文</span>';
       const finalResult = await translateText(text, sourceLang, targetLang);
       outputDiv.textContent = finalResult;
@@ -434,7 +422,6 @@
         outputDiv.innerHTML = '等待输入...<span id="tooltipRight" class="custom-tooltip">暂无原文</span>';
         return;
       }
-      
       outputDiv.innerHTML = '实时翻译中...<span id="tooltipRight" class="custom-tooltip">暂无原文</span>';
       const finalResult = await translateText(text, sourceLang, targetLang);
       outputDiv.textContent = finalResult;
@@ -447,8 +434,7 @@
 
     function clearContent(inputId, outputId, tooltipId) {
       document.getElementById(inputId).value = "";
-      const outputDiv = document.getElementById(outputId);
-      outputDiv.innerHTML = '等待输入...<span id="' + tooltipId + '" class="custom-tooltip">暂无原文</span>';
+      document.getElementById(outputId).innerHTML = '等待输入...<span id="' + tooltipId + '" class="custom-tooltip">暂无原文</span>';
     }
 
     function copyText(outputId, btnId) {
