@@ -6,16 +6,18 @@
   <title>DS &Translation - 安全授权版</title>
   <link rel="icon" href="logo.png" type="image/png">
   <style>
-    /* 科技风格淡色背景 */
+    /* 护眼深色科技风渐变背景 */
     body { 
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
       padding: 20px; 
       max-width: 1200px; 
       margin: 0 auto; 
-      background: linear-gradient(135deg, #0f172a08 0%, #1e293b15 100%), #e2e8f0; 
+      background: linear-gradient(135deg, #090d16 0%, #111c2e 50%, #0f172a 100%);
+      color: #e2e8f0;
+      min-height: 100vh;
     }
     .header-box { text-align: center; margin-bottom: 25px; }
-    .header-box img { width: 80px; height: 80px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); vertical-align: middle; margin-right: 15px; }
+    .header-box img { width: 80px; height: 80px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); vertical-align: middle; margin-right: 15px; }
     .header-title { display: inline-block; vertical-align: middle; text-align: left; }
     
     h2 { 
@@ -31,16 +33,16 @@
     
     .container { display: flex; gap: 20px; flex-wrap: wrap; }
     
-    /* 面板科技风微调 */
+    /* 深色科技风面板卡片 */
     .panel { 
       flex: 1; 
       min-width: 350px; 
-      background: rgba(255, 255, 255, 0.92); 
-      backdrop-filter: blur(8px);
+      background: rgba(15, 23, 42, 0.85); 
+      backdrop-filter: blur(10px);
       padding: 20px; 
-      border-radius: 10px; 
-      box-shadow: 0 4px 20px rgba(0,0,0,0.08); 
-      border: 1px solid rgba(255, 255, 255, 0.6);
+      border-radius: 12px; 
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4); 
+      border: 1px solid rgba(59, 130, 246, 0.25);
     }
     
     .input-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
@@ -48,9 +50,9 @@
 
     /* Clear 按钮：红边白字 */
     .clear-btn { 
-      background: #ff1744; 
+      background: rgba(255, 23, 68, 0.15); 
       border: 1px solid #ff1744; 
-      color: #fff; 
+      color: #ff8a80; 
       font-size: 13px; 
       font-weight: bold;
       cursor: pointer; 
@@ -58,33 +60,63 @@
       border-radius: 4px; 
       transition: all 0.2s; 
     }
-    .clear-btn:hover { background: #d50000; border-color: #d50000; }
+    .clear-btn:hover { background: #ff1744; color: #fff; }
     
-    textarea { width: 100%; height: 115px; padding: 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 16px; resize: vertical; box-sizing: border-box; background: #fafafa; }
-    textarea:focus { border-color: #3b82f6; outline: none; background: #fff; }
+    textarea { 
+      width: 100%; 
+      height: 115px; 
+      padding: 12px; 
+      border: 1px solid rgba(59, 130, 246, 0.4); 
+      border-radius: 6px; 
+      font-size: 16px; 
+      resize: vertical; 
+      box-sizing: border-box; 
+      background: rgba(3, 7, 18, 0.6); 
+      color: #f8fafc;
+    }
+    textarea:focus { border-color: #3b82f6; outline: none; background: rgba(3, 7, 18, 0.9); }
     
-    select { padding: 8px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 14px; background: #fff; cursor: pointer; }
-    optgroup { font-weight: bold; color: #007bff; }
-    option { color: #333; padding: 5px; }
+    /* 普通下拉框样式 */
+    select { 
+      padding: 8px 10px; 
+      border-radius: 6px; 
+      border: 1px solid rgba(59, 130, 246, 0.4); 
+      font-size: 14px; 
+      background: rgba(3, 7, 18, 0.8); 
+      color: #f8fafc;
+      cursor: pointer; 
+    }
+    select:focus { border-color: #3b82f6; outline: none; }
+    
+    /* 专属定制：将源语言选择框（自动检测边控）替换为高亮科技蓝边框与底色 */
+    .tech-select-source {
+      border: 1.5px solid #3b82f6 !important;
+      background: rgba(30, 58, 138, 0.25) !important;
+      color: #93c5fd !important;
+      font-weight: 600;
+    }
+
+    optgroup { font-weight: bold; color: #60a5fa; background: #0f172a; }
+    option { color: #f8fafc; background: #0f172a; padding: 5px; }
     
     .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; margin-top: 15px; }
     
     .result-box { 
-      padding: 12px; background: #000000 !important; border: 1px solid #1e293b !important; border-radius: 6px; 
+      padding: 12px; background: #020617 !important; border: 1px solid rgba(59, 130, 246, 0.3) !important; border-radius: 6px; 
       min-height: 115px; font-size: 16px; color: #ffffff !important; word-break: break-all; white-space: pre-wrap; 
       cursor: default; position: relative; font-weight: bold; text-align: left !important; direction: ltr !important;
       text-shadow: -0.6px -0.6px 0 #ff1744, 0.6px -0.6px 0 #ff1744, -0.6px 0.6px 0 #ff1744, 0.6px 0.6px 0 #ff1744 !important;
     }
-    .result-box:hover { background: #0a0a0a !important; }
+    .result-box:hover { background: #090d1a !important; }
     .custom-tooltip {
-      visibility: hidden; background-color: #222222; color: #ffffff; text-align: left; border-radius: 6px;
+      visibility: hidden; background-color: #1e293b; color: #ffffff; text-align: left; border-radius: 6px;
       padding: 8px 12px; position: absolute; z-index: 10; bottom: 110%; left: 10px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4); font-size: 14px; line-height: 1.4; opacity: 0;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.6); font-size: 14px; line-height: 1.4; opacity: 0;
       transition: opacity 0.2s ease-in-out; max-width: 90%; pointer-events: none; font-weight: bold;
-      white-space: pre-wrap; text-shadow: none;
+      white-space: pre-wrap; text-shadow: none; border: 1px solid rgba(59,130,246,0.3);
     }
     .custom-tooltip::after {
-      content: ""; position: absolute; top: 100%; left: 20px; border-width: 6px; border-style: solid; border-color: #222222 transparent transparent transparent;
+      content: ""; position: absolute; top: 100%; left: 20px; border-width: 6px; border-style: solid; border-color: #1e293b transparent transparent transparent;
     }
     .result-box:hover .custom-tooltip { visibility: visible; opacity: 1; }
     
@@ -97,36 +129,37 @@
       font-weight: bold; 
       font-size: 13px;
       display: inline-block;
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4);
     }
 
     .btn-group { display: flex; gap: 10px; align-items: center; }
     
-    .copy-btn { padding: 5px 14px; background: #2563eb; color: #fff; border: none; border-radius: 4px; font-size: 13px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+    .copy-btn { padding: 5px 14px; background: #2563eb; color: #fff; border: none; border-radius: 4px; font-size: 13px; font-weight: bold; cursor: pointer; transition: background 0.2s; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4); }
     .copy-btn:hover { background: #1d4ed8; }
-    .copy-btn.copied { background: #64748b; }
+    .copy-btn.copied { background: #475569; }
     
     .tip { display: none; }
 
     #auth-overlay {
       position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-      background: rgba(15, 23, 42, 0.85); z-index: 999999;
+      background: rgba(3, 7, 18, 0.9); z-index: 999999;
       display: flex; justify-content: center; align-items: center;
-      backdrop-filter: blur(5px);
+      backdrop-filter: blur(8px);
     }
     .auth-box {
-      background: #fff; padding: 30px; border-radius: 12px; width: 350px; text-align: center;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      background: #0f172a; border: 1px solid rgba(59, 130, 246, 0.3); padding: 30px; border-radius: 12px; width: 350px; text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5); color: #f8fafc;
     }
-    .auth-box h3 { margin-top: 0; color: #1e293b; }
+    .auth-box h3 { margin-top: 0; color: #f8fafc; }
     .auth-box input {
-      width: 100%; padding: 10px; margin: 15px 0; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 15px;
+      width: 100%; padding: 10px; margin: 15px 0; border: 1px solid rgba(59, 130, 246, 0.4); border-radius: 6px; box-sizing: border-box; font-size: 15px; background: rgba(3, 7, 18, 0.8); color: #fff;
     }
     .auth-box button {
       width: 100%; padding: 10px; background: #2563eb; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; font-weight: bold;
     }
     .auth-box button:hover { background: #1d4ed8; }
-    .auth-box button:disabled { background: #94a3b8; cursor: not-allowed; }
-    .auth-error { color: #ff1744; font-size: 13px; margin-top: 10px; display: none; font-weight: bold; }
+    .auth-box button:disabled { background: #475569; cursor: not-allowed; }
+    .auth-error { color: #ff8a80; font-size: 13px; margin-top: 10px; display: none; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -134,7 +167,7 @@
   <div id="auth-overlay">
     <div class="auth-box">
       <h3>🔒 请输入您的专属使用密码</h3>
-      <p style="font-size: 13px; color: #64748b;">设备首次验证绑定后将自动记住授权</p>
+      <p style="font-size: 13px; color: #94a3b8;">设备首次验证绑定后将自动记住授权</p>
       <input type="password" id="accessPassword" placeholder="请输入密码..." autofocus>
       <button id="loginBtn" onclick="verifyPassword()">确认进入</button>
       <div id="authErrorMsg" class="auth-error"></div>
@@ -152,11 +185,11 @@
   <div class="container">
     <!-- 左侧面板 -->
     <div class="panel">
-      <!-- 同一行：蓝底白字标签、源语言选择框、Clear按钮 -->
+      <!-- 同一行：蓝底白字标签、源语言选择框（科技蓝边控）、Clear按钮 -->
       <div class="input-header">
         <div style="display: flex; align-items: center; gap: 8px;">
           <span class="badge-label">源语言 & Source</span>
-          <select id="sourceLangLeft" onchange="translateLeftToRight()">
+          <select id="sourceLangLeft" class="tech-select-source" onchange="translateLeftToRight()">
             <option value="auto" selected>自动检测语言 (Auto Detect)</option>
             <option value="zh-CN">中文 (Chinese)</option>
             <option value="my">缅甸语 (Burmese)</option>
@@ -169,7 +202,7 @@
 
       <textarea id="inputLeft" placeholder="Enter text with numbers and currency..."></textarea>
       
-      <!-- 同一行：蓝底白字目标语言标签 与 Copy 按钮 -->
+      <!-- 同一行：目标语言标签 与 Copy 按钮 -->
       <div class="result-header">
         <span class="badge-label">目标翻译语言 & Target Language</span>
         <div class="btn-group">
@@ -177,6 +210,7 @@
         </div>
       </div>
 
+      <!-- 目标语言选择下拉框已移到中间箭头位置 -->
       <div style="margin-bottom: 10px;">
         <select id="targetLangLeft" onchange="translateLeftToRight()" style="width: 100%;">
           <optgroup label="✨ 英语与核心欧洲语言">
@@ -234,11 +268,11 @@
 
     <!-- 右侧面板 -->
     <div class="panel">
-      <!-- 同一行：蓝底白字标签、源语言选择框、Clear按钮 -->
+      <!-- 同一行：蓝底白字标签、源语言选择框（科技蓝边控）、Clear按钮 -->
       <div class="input-header">
         <div style="display: flex; align-items: center; gap: 8px;">
           <span class="badge-label">源语言 & Source</span>
-          <select id="sourceLangRight" onchange="translateRightToLeft()">
+          <select id="sourceLangRight" class="tech-select-source" onchange="translateRightToLeft()">
             <option value="auto" selected>自动检测语言 (Auto Detect)</option>
             <option value="en">英语 (English)</option>
             <option value="fr">法语 (French)</option>
@@ -253,7 +287,7 @@
 
       <textarea id="inputRight" placeholder="Enter any foreign text..."></textarea>
       
-      <!-- 同一行：蓝底白字目标语言标签 与 Copy 按钮 -->
+      <!-- 同一行：目标语言标签 与 Copy 按钮 -->
       <div class="result-header">
         <span class="badge-label">目标翻译语言 & Target Language</span>
         <div class="btn-group">
@@ -261,6 +295,7 @@
         </div>
       </div>
 
+      <!-- 目标语言选择下拉框已移到中间箭头位置 -->
       <div style="margin-bottom: 10px;">
         <select id="targetLangRight" onchange="translateRightToLeft()" style="width: 100%;">
           <optgroup label="✨ 主要翻译目标">
