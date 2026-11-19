@@ -6,7 +6,6 @@
   <title>DS &Translation - 安全授权版</title>
   <link rel="icon" href="logo.png" type="image/png">
   <style>
-    /* 全局统一字体，底色整体淡化约30%，护眼舒适 */
     body { 
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
       padding: 20px; 
@@ -20,7 +19,6 @@
     .header-box { text-align: center; margin-bottom: 25px; }
     .header-box img { width: 75px; height: 75px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); vertical-align: middle; margin-right: 15px; }
     .header-title { display: inline-block; vertical-align: middle; text-align: left; }
-    
     h2 { 
       margin: 0; 
       font-size: 32px; 
@@ -29,12 +27,8 @@
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    
     .sub-title { display: none; }
-    
     .container { display: flex; gap: 20px; flex-wrap: wrap; }
-    
-    /* 面板底色淡化，视觉更柔和护眼 */
     .panel { 
       flex: 1; 
       min-width: 350px; 
@@ -45,10 +39,7 @@
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25); 
       border: 1px solid rgba(71, 85, 105, 0.4);
     }
-    
     .input-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-
-    /* 统一按钮与标签的字号、高度 */
     .clear-btn { 
       background: rgba(255, 61, 87, 0.12); 
       border: 1px solid #ff3d57; 
@@ -61,7 +52,6 @@
       transition: all 0.2s; 
     }
     .clear-btn:hover { background: #ff3d57; color: #fff; }
-    
     textarea { 
       width: 100%; 
       height: 115px; 
@@ -76,8 +66,6 @@
       color: #f1f5f9;
     }
     textarea:focus { border-color: #3b82f6; outline: none; background: rgba(11, 17, 29, 0.9); }
-    
-    /* 下拉框统一风格与字号 */
     select { 
       padding: 7px 10px; 
       border-radius: 6px; 
@@ -89,28 +77,22 @@
       cursor: pointer; 
     }
     select:focus { border-color: #3b82f6; outline: none; }
-    
-    /* 专属科技蓝边控 */
     .tech-select-source {
       border: 1.5px solid #3b82f6 !important;
       background: rgba(30, 58, 138, 0.2) !important;
       color: #93c5fd !important;
       font-weight: 600;
     }
-
     optgroup { font-weight: bold; color: #60a5fa; background: #111827; }
     option { color: #f1f5f9; background: #111827; padding: 6px; }
-    
     .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; margin-top: 15px; }
-    
     .result-box { 
       padding: 12px; background: #080e1a !important; border: 1px solid rgba(71, 85, 105, 0.4) !important; border-radius: 6px; 
-      min-height: 115px; font-size: 14px; font-family: inherit; color: #ffffff !important; word-break: break-all; white-space: pre-wrap; 
+      min-height: 115px; font-size: 14px; font-family: inherit; color: #ffffff !important; word-break: break-word; white-space: pre-wrap; 
       cursor: default; position: relative; font-weight: 600; text-align: left !important; direction: ltr !important;
       text-shadow: -0.6px -0.6px 0 #ff3d57, 0.6px -0.6px 0 #ff3d57, -0.6px 0.6px 0 #ff3d57, 0.6px 0.6px 0 #ff3d57 !important;
     }
     .result-box:hover { background: #0c1424 !important; }
-    
     .custom-tooltip {
       visibility: hidden; background-color: #1e293b; color: #ffffff; text-align: left; border-radius: 6px;
       padding: 8px 12px; position: absolute; z-index: 10; bottom: 110%; left: 10px;
@@ -122,8 +104,6 @@
       content: ""; position: absolute; top: 100%; left: 20px; border-width: 6px; border-style: solid; border-color: #1e293b transparent transparent transparent;
     }
     .result-box:hover .custom-tooltip { visibility: visible; opacity: 1; }
-    
-    /* 统一蓝底白字标签 */
     .badge-label { 
       background: #2563eb; 
       color: #ffffff; 
@@ -134,13 +114,10 @@
       display: inline-block;
       box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
     }
-
     .btn-group { display: flex; gap: 10px; align-items: center; }
-    
     .copy-btn { padding: 6px 14px; background: #2563eb; color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.2s; box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3); }
     .copy-btn:hover { background: #1d4ed8; }
     .copy-btn.copied { background: #475569; }
-
     #auth-overlay {
       position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
       background: rgba(11, 17, 29, 0.9); z-index: 999999;
@@ -259,7 +236,7 @@
       </div>
 
       <div id="outputLeft" class="result-box">
-        Waiting for input...
+        <span class="result-text">Waiting for input...</span>
         <span id="tooltipLeft" class="custom-tooltip">No original text</span>
       </div>
     </div>
@@ -313,7 +290,7 @@
       </div>
 
       <div id="outputRight" class="result-box">
-        Waiting for input...
+        <span class="result-text">Waiting for input...</span>
         <span id="tooltipRight" class="custom-tooltip">No original text</span>
       </div>
     </div>
@@ -368,7 +345,6 @@
         const res = await fetch(`${API_URL}/latest`, {
           headers: { 'X-Master-Key': MASTER_KEY }
         });
-        
         if (!res.ok) throw new Error("云端配置错误或密钥无效");
 
         const data = await res.json();
@@ -430,7 +406,6 @@
 
     function formatMoneyAndThousand(text) {
       let result = text;
-      
       result = result.replace(/\bUSDT\b/gi, '___KEEP_USDT___');
       result = result.replace(/\bUSDC\b/gi, '___KEEP_USDC___');
 
@@ -467,109 +442,195 @@
     }
 
     // =========================================================================
-    // 终极直连翻译引擎
+    // 稳健翻译引擎（自动分段 + 双通道降级 + 明确错误提示）
     // =========================================================================
-    async function translateText(text, sourceLang, targetLang) {
-      if (!text.trim()) return "";
+    function splitTextIntoChunks(text, maxLen = 420) {
+      if (text.length <= maxLen) return [text];
+      const chunks = [];
+      const paragraphs = text.split('\n');
+      let current = '';
 
-      let src = sourceLang;
-      if (src === 'auto') {
-        src = /[\u4e00-\u9fa5]/.test(text) ? 'zh-CN' : 'en';
-      }
-
-      if (src === targetLang) {
-        src = (targetLang === 'zh-CN' ? 'en' : 'zh-CN');
-      }
-
-      try {
-        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${src}|${targetLang}`;
-        const res = await fetch(url);
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.responseData && data.responseData.translatedText) {
-            let resText = data.responseData.translatedText;
-            if (!resText.includes("DISTINCT LANGUAGES") && !resText.includes("MYMEMORY WARNING")) {
-              return formatMoneyAndThousand(resText.trim());
+      for (const para of paragraphs) {
+        const candidate = current ? current + '\n' + para : para;
+        if (candidate.length <= maxLen) {
+          current = candidate;
+        } else {
+          if (current) {
+            chunks.push(current);
+            current = '';
+          }
+          if (para.length <= maxLen) {
+            current = para;
+          } else {
+            for (let i = 0; i < para.length; i += maxLen) {
+              chunks.push(para.slice(i, i + maxLen));
             }
           }
         }
-      } catch (e) {}
+      }
+      if (current) chunks.push(current);
+      return chunks;
+    }
 
+    async function fetchWithTimeout(url, timeoutMs = 8000) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
       try {
-        const url2 = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
-        const res2 = await fetch(url2);
+        return await fetch(url, { signal: controller.signal });
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    async function translateSingleChunk(chunk, sourceLang, targetLang) {
+      let src = sourceLang;
+      if (src === 'auto') {
+        src = /[\u4e00-\u9fa5]/.test(chunk) ? 'zh-CN' : 'auto';
+      }
+
+      // 1. 优先尝试 Google gtx 端点
+      try {
+        const slParam = src === 'auto' ? 'auto' : src;
+        const url2 = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${encodeURIComponent(slParam)}&tl=${encodeURIComponent(targetLang)}&dt=t&q=${encodeURIComponent(chunk)}`;
+        const res2 = await fetchWithTimeout(url2, 7000);
         if (res2.ok) {
           const data2 = await res2.json();
           let translatedText = "";
-          if (data2 && data2[0]) {
-            data2[0].forEach(item => { if (item[0]) translatedText += item[0]; });
+          if (Array.isArray(data2) && Array.isArray(data2[0])) {
+            data2[0].forEach(item => {
+              if (item && item[0]) translatedText += item[0];
+            });
           }
           if (translatedText.trim()) {
-            return formatMoneyAndThousand(translatedText.trim());
+            return { ok: true, text: translatedText.trim() };
           }
         }
       } catch (e2) {}
 
-      return formatMoneyAndThousand(text);
+      // 2. 备选 MyMemory 接口（注意：MyMemory 要求明确源语言，auto 兜底为 en/zh-CN）
+      try {
+        let mmSrc = src === 'auto' ? (targetLang === 'zh-CN' ? 'en' : 'zh-CN') : src;
+        if (mmSrc === targetLang) {
+          mmSrc = targetLang === 'zh-CN' ? 'en' : 'zh-CN';
+        }
+        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(chunk)}&langpair=${encodeURIComponent(mmSrc)}|${encodeURIComponent(targetLang)}`;
+        const res = await fetchWithTimeout(url, 8000);
+        if (res.ok) {
+          const data = await res.json();
+          const candidate = data?.responseData?.translatedText || "";
+          const isLimitOrWarn =
+            candidate.includes("QUERY LENGTH LIMIT EXCEEDED") ||
+            candidate.includes("DISTINCT LANGUAGES") ||
+            candidate.includes("MYMEMORY WARNING");
+          if (candidate.trim() && !isLimitOrWarn) {
+            return { ok: true, text: candidate.trim() };
+          }
+        }
+      } catch (e) {}
+
+      return { ok: false, text: "" };
+    }
+
+    async function translateText(text, sourceLang, targetLang) {
+      if (!text.trim()) return { ok: true, text: "" };
+
+      const chunks = splitTextIntoChunks(text, 420);
+      const results = [];
+
+      for (const chunk of chunks) {
+        const r = await translateSingleChunk(chunk, sourceLang, targetLang);
+        if (!r.ok) {
+          return {
+            ok: false,
+            text: "[翻译失败：当前网络或免费翻译接口繁忙/限流，请稍后重试]"
+          };
+        }
+        results.push(r.text);
+      }
+
+      return {
+        ok: true,
+        text: formatMoneyAndThousand(results.join('\n'))
+      };
+    }
+
+    function renderOutput(outputId, tooltipId, text, originalText) {
+      const outputDiv = document.getElementById(outputId);
+      outputDiv.innerHTML = '';
+
+      const textSpan = document.createElement('span');
+      textSpan.className = 'result-text';
+      textSpan.textContent = text;
+
+      const tipSpan = document.createElement('span');
+      tipSpan.id = tooltipId;
+      tipSpan.className = 'custom-tooltip';
+      tipSpan.textContent = originalText ? ("Original Text:\n" + originalText) : "No original text";
+
+      outputDiv.appendChild(textSpan);
+      outputDiv.appendChild(tipSpan);
     }
 
     let timerLeft = null;
     let timerRight = null;
+    let seqLeft = 0;
+    let seqRight = 0;
 
     async function translateLeftToRight() {
+      const currentSeq = ++seqLeft;
       const text = document.getElementById('inputLeft').value;
       const sourceLang = document.getElementById('sourceLangLeft').value;
       const targetLang = document.getElementById('targetLangLeft').value;
-      const outputDiv = document.getElementById('outputLeft');
 
       if (!text.trim()) {
-        outputDiv.innerHTML = 'Waiting for input...<span id="tooltipLeft" class="custom-tooltip">No original text</span>';
+        renderOutput('outputLeft', 'tooltipLeft', 'Waiting for input...', '');
         return;
       }
-      outputDiv.innerHTML = 'Translating...<span id="tooltipLeft" class="custom-tooltip">No original text</span>';
-      const finalResult = await translateText(text, sourceLang, targetLang);
-      outputDiv.textContent = finalResult;
-      const newTooltip = document.createElement('span');
-      newTooltip.id = 'tooltipLeft';
-      newTooltip.className = 'custom-tooltip';
-      newTooltip.innerText = "Original Text:\n" + text;
-      outputDiv.appendChild(newTooltip);
+
+      renderOutput('outputLeft', 'tooltipLeft', 'Translating...', text);
+      const res = await translateText(text, sourceLang, targetLang);
+      if (currentSeq !== seqLeft) return; // 丢弃过期请求结果
+
+      renderOutput('outputLeft', 'tooltipLeft', res.text, text);
     }
 
     async function translateRightToLeft() {
+      const currentSeq = ++seqRight;
       const text = document.getElementById('inputRight').value;
       const sourceLang = document.getElementById('sourceLangRight').value;
       const targetLang = document.getElementById('targetLangRight').value;
-      const outputDiv = document.getElementById('outputRight');
 
       if (!text.trim()) {
-        outputDiv.innerHTML = 'Waiting for input...<span id="tooltipRight" class="custom-tooltip">No original text</span>';
+        renderOutput('outputRight', 'tooltipRight', 'Waiting for input...', '');
         return;
       }
-      outputDiv.innerHTML = 'Translating...<span id="tooltipRight" class="custom-tooltip">No original text</span>';
-      const finalResult = await translateText(text, sourceLang, targetLang);
-      outputDiv.textContent = finalResult;
-      const newTooltip = document.createElement('span');
-      newTooltip.id = 'tooltipRight';
-      newTooltip.className = 'custom-tooltip';
-      newTooltip.innerText = "Original Text:\n" + text;
-      outputDiv.appendChild(newTooltip);
+
+      renderOutput('outputRight', 'tooltipRight', 'Translating...', text);
+      const res = await translateText(text, sourceLang, targetLang);
+      if (currentSeq !== seqRight) return; // 丢弃过期请求结果
+
+      renderOutput('outputRight', 'tooltipRight', res.text, text);
     }
 
     function clearContent(inputId, outputId, tooltipId) {
+      if (inputId === 'inputLeft') seqLeft++;
+      if (inputId === 'inputRight') seqRight++;
       document.getElementById(inputId).value = "";
-      document.getElementById(outputId).innerHTML = 'Waiting for input...<span id="' + tooltipId + '" class="custom-tooltip">No original text</span>';
+      renderOutput(outputId, tooltipId, 'Waiting for input...', '');
     }
 
     function copyText(outputId, btnId) {
       const outputDiv = document.getElementById(outputId);
-      const clone = outputDiv.cloneNode(true);
-      const tip = clone.querySelector('.custom-tooltip');
-      if (tip) tip.remove();
-      const outputText = clone.textContent ? clone.textContent.trim() : "";
+      const textEl = outputDiv.querySelector('.result-text');
+      const outputText = textEl ? textEl.textContent.trim() : "";
       const copyBtn = document.getElementById(btnId);
 
-      if (!outputText || outputText.includes("Waiting for input") || outputText.includes("Translating")) return;
+      if (
+        !outputText ||
+        outputText.includes("Waiting for input") ||
+        outputText.includes("Translating") ||
+        outputText.startsWith("[翻译失败")
+      ) return;
 
       navigator.clipboard.writeText(outputText).then(() => {
         copyBtn.innerText = "Copied!";
@@ -583,12 +644,12 @@
 
     document.getElementById('inputLeft').addEventListener('input', () => {
       clearTimeout(timerLeft);
-      timerLeft = setTimeout(translateLeftToRight, 400);
+      timerLeft = setTimeout(translateLeftToRight, 800);
     });
 
     document.getElementById('inputRight').addEventListener('input', () => {
       clearTimeout(timerRight);
-      timerRight = setTimeout(translateRightToLeft, 400);
+      timerRight = setTimeout(translateRightToLeft, 800);
     });
   </script>
 </body>
